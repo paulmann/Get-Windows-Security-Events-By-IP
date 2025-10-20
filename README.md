@@ -5,9 +5,7 @@
 [![PowerShell](https://img.shields.io/badge/powershell-5.1%2B-blue.svg)](https://docs.microsoft.com/en-us/powershell/)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%2FServer-blue.svg)](https://www.microsoft.com/windows/)
 [![Event Log](https://img.shields.io/badge/event%20log-Security%20Events-blue.svg)](https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging)
-[![IP Analysis](https://img.shields.io/badge/IP%20Analysis-Single%2CRange%2CCIDR-success.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
-[![Deployment](https://img.shields.io/badge/deployment-Local%2CRemote%2CEnterprise-orange.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
-[![Compliance](https://img.shields.io/badge/compliance-PCI%2DSOX%2DHIPAA-critical.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
+
 
 ## 📋 Table of Contents
 
