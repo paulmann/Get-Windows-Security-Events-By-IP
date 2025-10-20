@@ -963,12 +963,12 @@ For enterprise organizations requiring commercial support, SLAs, or custom licen
 **Get started today and transform your security event monitoring capabilities!**
 
 [![Download Now](https://img.shields.io/badge/Download-Latest_Release-success?style=for-the-badge&logo=azurepipelines)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/latest)
-[![Documentation](https://img.shields.io/badge/Docs-Online_Documentation-blue?style=for-the-badge&logo=gitbook)](https://docs.securitytools.company/get-security-events-by-ip)
-[![Enterprise Support](https://img.shields.io/badge/Support-Enterprise_Grade-orange?style=for-the-badge&logo=probot)](mailto:enterprise-support@company.com)
+[![Documentation](https://img.shields.io/badge/Docs-Online_Documentation-blue?style=for-the-badge&logo=gitbook)](https://sysadministrator.ru/get-security-events-by-ip/)
+[![Enterprise Support](https://img.shields.io/badge/Support-Enterprise_Grade-orange?style=for-the-badge&logo=probot)](mailto:m@deynekin.com)
 
 **⭐ Star this repository if you find it valuable for your organization!**
 
-*Last updated: January 2024 | Version: 2.0.0 | Enterprise Ready*
+*Last updated: 10 Jctober 2025 | Version: 2.0.0 | Enterprise Ready*
 
 </div>
 ```
