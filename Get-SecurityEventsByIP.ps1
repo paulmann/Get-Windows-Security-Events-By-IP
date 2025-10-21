@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Full-featured security event analyzer with time filtering, CIDR support,
-    multiple output formats (Text, CSV, JSON, Markdown, HTML), and compliance-ready reporting.
+    multiple output formats (Text, CSV, JSON, Markdown, HTML, MySQL), and compliance-ready reporting.
 
 .PARAMETER IpAddress
     IP address or CIDR range (e.g., 192.168.1.100, 10.0.0.0/24, ::1, 2001:db8::/64).
@@ -40,19 +40,22 @@
     End time for filtering.
 
 .PARAMETER OutputFormat
-    Output format: Text, CSV, JSON, Markdown, HTML. Default: Text.
+    Output format: Text, CSV, JSON, Markdown, HTML, MySQL. Default: Text.
+
+.PARAMETER ShowOutput
+    Display results in console (in addition to file export).
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -LastDays 7 -OutputFormat HTML
+    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -LastDays 7 -OutputFormat HTML -ShowOutput
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "::ffff:10.0.0.5" -OutputFormat Markdown
+    .\Get-SecurityEventsByIP.ps1 -IpAddress "::ffff:10.0.0.5" -OutputFormat MySQL
 
 .NOTES
     Author: Mikhail Deynekin
     Email: mid1977@gmail.com
     Based on: Get-Windows-Security-Events-By-IP (SysAdministrator.ru)
-    Version: 3.1 (Full compliance + HTML/Markdown + Summary)
+    Version: 4.0 (Fixed AllEvents + MySQL export + ShowOutput)
 #>
 
 #Requires -RunAsAdministrator
@@ -97,8 +100,11 @@ param (
     [datetime]$EndTime,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('Text', 'CSV', 'JSON', 'Markdown', 'HTML')]
-    [string]$OutputFormat = 'Text'
+    [ValidateSet('Text', 'CSV', 'JSON', 'Markdown', 'HTML', 'MySQL')]
+    [string]$OutputFormat = 'Text',
+
+    [Parameter(Mandatory = $false)]
+    [switch]$ShowOutput
 )
 
 # === IP and Time Validation ===
@@ -190,19 +196,24 @@ function Test-IpInCidr {
 }
 
 function Get-CategoryXPathQuery {
-    param([string]$Category, [bool]$IsCidr)
+    param([string]$Category, [string]$IpAddress, [bool]$IsCidr)
+    
     if ($IsCidr) {
         $xpath = switch ($Category) {
             'RDP' { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='LogonType']='10']]" }
             { $_ -in 'FileShare', 'Authentication' } { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='LogonType']='3']]" }
-            'AllEvents' { "*" }
+            'AllEvents' { 
+                "*[EventData[Data[@Name='IpAddress'] and (Data[@Name='IpAddress']!='-') and (Data[@Name='IpAddress']!='::1') and (Data[@Name='IpAddress']!='127.0.0.1')]]" 
+            }
             default { throw "Unknown category '$Category'" }
         }
     } else {
         $xpath = switch ($Category) {
-            'RDP' { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='IpAddress']='$baseIp']] and *[EventData[Data[@Name='LogonType']='10']]" }
-            { $_ -in 'FileShare', 'Authentication' } { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='IpAddress']='$baseIp']] and *[EventData[Data[@Name='LogonType']='3']]" }
-            'AllEvents' { "*[EventData[Data[@Name='IpAddress']='$baseIp']]" }
+            'RDP' { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='IpAddress']='$IpAddress']] and *[EventData[Data[@Name='LogonType']='10']]" }
+            { $_ -in 'FileShare', 'Authentication' } { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='IpAddress']='$IpAddress']] and *[EventData[Data[@Name='LogonType']='3']]" }
+            'AllEvents' { 
+                "*[EventData[Data[@Name='IpAddress']='$IpAddress']]" 
+            }
             default { throw "Unknown category '$Category'" }
         }
     }
@@ -235,6 +246,131 @@ function Get-EventDataByName {
     } catch {
         return $DefaultValue
     }
+}
+
+function Export-MySQL {
+    param(
+        [object[]]$Events,
+        [string]$Path,
+        [string[]]$DisplayColumns
+    )
+    
+    $dir = Split-Path $Path -Parent
+    if ($dir -and -not (Test-Path $dir)) { 
+        New-Item -Path $dir -ItemType Directory -Force | Out-Null 
+    }
+    
+    $tableName = "security_events"
+    $sqlCommands = @()
+    
+    $columnDefinitions = @()
+    $columnDefinitions += "id INT AUTO_INCREMENT PRIMARY KEY"
+    $columnDefinitions += "time_created DATETIME"
+    $columnDefinitions += "event_id INT"
+    $columnDefinitions += "account VARCHAR(255)"
+    $columnDefinitions += "source_ip VARCHAR(45)"
+    $columnDefinitions += "computer VARCHAR(255)"
+    $columnDefinitions += "port VARCHAR(10)"
+    $columnDefinitions += "logon_type VARCHAR(50)"
+    $columnDefinitions += "auth_package VARCHAR(100)"
+    $columnDefinitions += "logon_process VARCHAR(100)"
+    $columnDefinitions += "status VARCHAR(50)"
+    $columnDefinitions += "sub_status VARCHAR(50)"
+    $columnDefinitions += "message TEXT"
+    $columnDefinitions += "result TEXT"
+    $columnDefinitions += "record_id BIGINT"
+    $columnDefinitions += "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+    
+    $createTableSQL = @"
+CREATE TABLE IF NOT EXISTS `$tableName` (
+    $($columnDefinitions -join ",`n    ")
+);
+"@
+    $sqlCommands += $createTableSQL
+    $sqlCommands += ""
+
+    foreach ($event in $Events) {
+        $columns = @()
+        $values = @()
+        
+        foreach ($prop in $event.PSObject.Properties) {
+            if ($prop.Name -eq 'PSTypeName') { continue }
+            
+            $value = $prop.Value
+            if ($null -eq $value) { $value = '' }
+            
+            $escapedValue = $value.ToString().Replace("'", "''").Replace("\", "\\")
+            
+            switch ($prop.Name) {
+                'TimeCreated' { 
+                    $columns += 'time_created'
+                    $values += "'$($value.ToString('yyyy-MM-dd HH:mm:ss'))'"
+                }
+                'EventId' { 
+                    $columns += 'event_id'
+                    $values += if ($value -eq 'N/A') { 'NULL' } else { $value }
+                }
+                'Account' { 
+                    $columns += 'account'
+                    $values += "'$escapedValue'"
+                }
+                'SourceIP' { 
+                    $columns += 'source_ip'
+                    $values += "'$escapedValue'"
+                }
+                'Computer' { 
+                    $columns += 'computer'
+                    $values += "'$escapedValue'"
+                }
+                'Port' { 
+                    $columns += 'port'
+                    $values += if ($value -eq 'N/A') { 'NULL' } else { "'$escapedValue'" }
+                }
+                'LogonType' { 
+                    $columns += 'logon_type'
+                    $values += "'$escapedValue'"
+                }
+                'AuthPackage' { 
+                    $columns += 'auth_package'
+                    $values += "'$escapedValue'"
+                }
+                'LogonProcess' { 
+                    $columns += 'logon_process'
+                    $values += "'$escapedValue'"
+                }
+                'Status' { 
+                    $columns += 'status'
+                    $values += if ($value -eq 'N/A') { 'NULL' } else { "'$escapedValue'" }
+                }
+                'SubStatus' { 
+                    $columns += 'sub_status'
+                    $values += if ($value -eq 'N/A') { 'NULL' } else { "'$escapedValue'" }
+                }
+                'Message' { 
+                    $columns += 'message'
+                    $values += "'$escapedValue'"
+                }
+                'Result' { 
+                    $columns += 'result'
+                    $values += "'$escapedValue'"
+                }
+                'RecordId' { 
+                    $columns += 'record_id'
+                    $values += if ($value -eq 'N/A') { 'NULL' } else { $value }
+                }
+            }
+        }
+        
+        $insertSQL = "INSERT INTO `$tableName` ($($columns -join ', ')) VALUES ($($values -join ', '));"
+        $sqlCommands += $insertSQL
+    }
+    
+    $sqlCommands += ""
+    $sqlCommands += "-- Total events: $($Events.Count)"
+    $sqlCommands += "-- Generated on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    $sqlCommands += "-- Script: Get-SecurityEventsByIP.ps1"
+    
+    $sqlCommands | Set-Content -Path $Path -Encoding UTF8
 }
 
 function ConvertTo-ProcessedEvent {
@@ -390,6 +526,9 @@ function Export-Results {
             }
             $output | ConvertTo-Json -Depth 10 | Set-Content -Path $Path -Encoding UTF8
         }
+        'MySQL' {
+            Export-MySQL -Events $Events -Path $Path -DisplayColumns $DisplayColumns
+        }
         'Markdown' {
             $lines = @()
             $lines += "# Security Events Report"
@@ -440,8 +579,8 @@ function Export-Results {
                 $lines += "| " + ($values -join " | ") + " |"
             }
             $lines | Set-Content -Path $Path -Encoding UTF8
-        }        'HTML' {
-            # Подготовка данных для HTML
+        }
+        'HTML' {
             $eventIdLabels = ($stats.EventIdGroups | ForEach-Object { "'Event $($_.Name)'" }) -join ', '
             $eventIdData = ($stats.EventIdGroups | ForEach-Object { $_.Count }) -join ', '
             $logonTypeLabels = ($stats.LogonTypeGroups | ForEach-Object { "'$($_.Name)'" }) -join ', '
@@ -599,7 +738,9 @@ try {
     if (-not (Test-SecurityLogAvailability)) { throw "Security log unavailable" }
 
     $isCidr = $null -ne $cidrPrefix
-    $queryXml = Get-CategoryXPathQuery -Category $Category -IsCidr $isCidr
+    
+    $queryXml = Get-CategoryXPathQuery -Category $Category -IpAddress $baseIp -IsCidr $isCidr
+    
     $rawEvents = Get-WinEvent -FilterXml ([xml]$queryXml) -MaxEvents $MaxEvents -ErrorAction Stop
 
     if ($finalStartTime -or $finalEndTime) {
@@ -613,22 +754,28 @@ try {
     if ($isCidr) {
         $networkBytes = $ipParsed.GetAddressBytes()
         $addressFamily = $ipParsed.AddressFamily
-        $rawEvents = $rawEvents | Where-Object {
-            $ipStr = Get-EventDataByName -Event $_ -FieldName 'IpAddress' -DefaultValue ""
-            if ($ipStr -eq "N/A" -or $ipStr -eq "::1" -or $ipStr -eq "127.0.0.1") { return $false }
+        $filteredEvents = @()
+        
+        foreach ($event in $rawEvents) {
+            $ipStr = Get-EventDataByName -Event $event -FieldName 'IpAddress' -DefaultValue ""
+            if ($ipStr -eq "N/A" -or $ipStr -eq "::1" -or $ipStr -eq "127.0.0.1") { continue }
+            
             $evtIp = $null
             if ([System.Net.IPAddress]::TryParse($ipStr, [ref]$evtIp)) {
                 if ($evtIp.AddressFamily -eq $addressFamily) {
                     $evtBytes = $evtIp.GetAddressBytes()
-                    return Test-IpInCidr -eventIpBytes $evtBytes -networkBytes $networkBytes -prefixLength $cidrPrefix
+                    if (Test-IpInCidr -eventIpBytes $evtBytes -networkBytes $networkBytes -prefixLength $cidrPrefix) {
+                        $filteredEvents += $event
+                    }
                 }
             }
-            return $false
         }
+        $rawEvents = $filteredEvents
     }
 
     if ($rawEvents.Count -eq 0) {
         Set-Content -Path $OutputPath -Value "No events found for: $IpAddress" -Encoding UTF8
+        Write-Host "`n⚠️ No events found for: $IpAddress" -ForegroundColor Yellow
         exit 0
     }
 
@@ -644,8 +791,17 @@ try {
     $columns = Get-ColumnsToDisplay -ShowColumns $ShowColumns -HideColumns $HideColumns -AllColumns $AllPossibleColumns
     Export-Results -Events $processed -Path $OutputPath -Format $OutputFormat -DisplayColumns $columns
 
-    Write-Host "`n✅ Results saved to: $OutputPath" -ForegroundColor Green
-    Write-Host "   Format: $OutputFormat | Events: $($processed.Count)" -ForegroundColor Cyan
+    if ($ShowOutput) {
+        Write-Host "`n" + ("=" * 80) -ForegroundColor Cyan
+        Write-Host "SECURITY EVENTS (first 20 shown)" -ForegroundColor Cyan
+        Write-Host ("=" * 80) -ForegroundColor Cyan
+        $processed | Select-Object -First 20 | Format-Table -AutoSize -Wrap -Property $columns
+        Write-Host ("=" * 80) -ForegroundColor Cyan
+        Write-Host "Total events: $($processed.Count) | Saved to: $OutputPath" -ForegroundColor Green
+    } else {
+        Write-Host "`n✅ Results saved to: $OutputPath" -ForegroundColor Green
+        Write-Host "   Format: $OutputFormat | Events: $($processed.Count)" -ForegroundColor Cyan
+    }
 
 } catch {
     Write-Host "`n[ERROR] $($_.Exception.Message)" -ForegroundColor Red
