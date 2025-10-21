@@ -1,16 +1,19 @@
 <#
 .SYNOPSIS
-    Retrieves Windows Security events referencing a specific IP address or CIDR range.
+    Retrieves Windows Security events referencing a specific IP address, CIDR range, or all failed authentication attempts.
 
 .DESCRIPTION
     Full-featured security event analyzer with time filtering, CIDR support,
     multiple output formats (Text, CSV, JSON, Markdown, HTML, MySQL), and compliance-ready reporting.
+    If IpAddress is not specified, collects all failed authentication, logon, and resource access attempts.
 
 .PARAMETER IpAddress
-    IP address or CIDR range (e.g., 192.168.1.100, 10.0.0.0/24, ::1, 2001:db8::/64).
+    Optional. IP address or CIDR range (e.g., 192.168.1.100, 10.0.0.0/24, ::1, 2001:db8::/64).
+    If omitted, collects all failed authentication events from any IP.
 
 .PARAMETER Category
     Event category: RDP, FileShare, Authentication, AllEvents. Default: 'RDP'.
+    Ignored when IpAddress is not specified.
 
 .PARAMETER OutputPath
     Output file path. Default: "C:\security_events_by_ip.txt".
@@ -46,23 +49,24 @@
     Display results in console (in addition to file export).
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -LastDays 7 -OutputFormat HTML -ShowOutput
+    .\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputFormat HTML -ShowOutput
+    Collects all failed authentication events from the last 7 days
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "::ffff:10.0.0.5" -OutputFormat MySQL
+    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -Category RDP -OutputFormat CSV
+    Collects RDP events from specific CIDR range
 
 .NOTES
     Author: Mikhail Deynekin
     Email: mid1977@gmail.com
-    Based on: Get-Windows-Security-Events-By-IP (SysAdministrator.ru)
-    Version: 4.0 (Fixed AllEvents + MySQL export + ShowOutput)
+    Version: 4.1 (Added collection of all failed auth events when IpAddress is not specified  + MySQL export + ShowOutput)
 #>
 
 #Requires -RunAsAdministrator
 
 [CmdletBinding(DefaultParameterSetName = 'Default')]
 param (
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$IpAddress,
 
     [Parameter(Mandatory = $false)]
@@ -110,30 +114,36 @@ param (
 # === IP and Time Validation ===
 $ipParsed = $null
 $cidrPrefix = $null
-if ($IpAddress -match '^([0-9a-f:.]+)(?:/(\d+))?$') {
-    $ipPart = $matches[1]
-    $cidrPart = $matches[2]
-    if (-not [System.Net.IPAddress]::TryParse($ipPart, [ref]$ipParsed)) {
-        throw "Invalid IP address in '$IpAddress'"
-    }
-    if ($cidrPart) {
-        $cidrPrefix = [int]$cidrPart
-        if ($ipParsed.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork) {
-            if ($cidrPrefix -lt 0 -or $cidrPrefix -gt 32) { throw "Invalid IPv4 CIDR prefix: $cidrPrefix" }
-        } else {
-            if ($cidrPrefix -lt 0 -or $cidrPrefix -gt 128) { throw "Invalid IPv6 CIDR prefix: $cidrPrefix" }
+$isCidr = $false
+$baseIp = $null
+
+if ($IpAddress) {
+    if ($IpAddress -match '^([0-9a-f:.]+)(?:/(\d+))?$') {
+        $ipPart = $matches[1]
+        $cidrPart = $matches[2]
+        if (-not [System.Net.IPAddress]::TryParse($ipPart, [ref]$ipParsed)) {
+            throw "Invalid IP address in '$IpAddress'"
         }
+        if ($cidrPart) {
+            $cidrPrefix = [int]$cidrPart
+            if ($ipParsed.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork) {
+                if ($cidrPrefix -lt 0 -or $cidrPrefix -gt 32) { throw "Invalid IPv4 CIDR prefix: $cidrPrefix" }
+            } else {
+                if ($cidrPrefix -lt 0 -or $cidrPrefix -gt 128) { throw "Invalid IPv6 CIDR prefix: $cidrPrefix" }
+            }
+            $isCidr = $true
+        }
+        $baseIp = $ipParsed.ToString()
+    } else {
+        throw "Invalid IP/CIDR format: $IpAddress"
     }
-} else {
-    throw "Invalid IP/CIDR format: $IpAddress"
 }
-$baseIp = $ipParsed.ToString()
 
 $finalStartTime = if ($PSBoundParameters.ContainsKey('StartTime')) { $StartTime } elseif ($LastDays) { (Get-Date).AddDays(-$LastDays) } elseif ($LastHours) { (Get-Date).AddHours(-$LastHours) } else { $null }
 $finalEndTime = if ($PSBoundParameters.ContainsKey('EndTime')) { $EndTime } else { Get-Date }
 
 # === Status Codes ===
-$script:StatusCodes = @{
+$StatusCodes = @{
     '0xc0000064' = 'Account does not exist'
     '0xc000006a' = 'Incorrect password'
     '0xc000006d' = 'Bad username or password'
@@ -149,7 +159,7 @@ $script:StatusCodes = @{
     '0xc0000413' = 'Machine is shutting down'
 }
 
-$script:FailureReasons = @{
+$FailureReasons = @{
     '%%2305' = 'Account does not exist'
     '%%2309' = 'Guest account'
     '%%2310' = 'Account disabled'
@@ -193,6 +203,19 @@ function Test-IpInCidr {
         }
     }
     return $true
+}
+
+function Get-FailedAuthXPathQuery {
+    # XPath for all failed authentication, logon, and access events
+    return @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">
+      *[System[(EventID=4625 or EventID=4771 or EventID=4776 or EventID=4768 or EventID=4770)]] 
+    </Select>
+  </Query>
+</QueryList>
+"@
 }
 
 function Get-CategoryXPathQuery {
@@ -403,9 +426,9 @@ function ConvertTo-ProcessedEvent {
                     if ($eventSubStatus -ne "") { $parts += "SubStatus=$eventSubStatus" }
                     if ($parts.Count -eq 0) { "Logon failed" } else { "Logon failed: $($parts -join '; ')" }
                 } else {
-                    if ($eventFailureReason -and $script:FailureReasons.ContainsKey($eventFailureReason)) { "Logon failed: $($script:FailureReasons[$eventFailureReason])" }
-                    elseif ($eventStatus -and $script:StatusCodes.ContainsKey($eventStatus)) { "Logon failed: $($script:StatusCodes[$eventStatus])" }
-                    elseif ($eventSubStatus -and $script:StatusCodes.ContainsKey($eventSubStatus)) { "Logon failed: $($script:StatusCodes[$eventSubStatus])" }
+                    if ($eventFailureReason -and $FailureReasons.ContainsKey($eventFailureReason)) { "Logon failed: $($FailureReasons[$eventFailureReason])" }
+                    elseif ($eventStatus -and $StatusCodes.ContainsKey($eventStatus)) { "Logon failed: $($StatusCodes[$eventStatus])" }
+                    elseif ($eventSubStatus -and $StatusCodes.ContainsKey($eventSubStatus)) { "Logon failed: $($StatusCodes[$eventSubStatus])" }
                     elseif ($eventFailureReason) { "Logon failed: $eventFailureReason" }
                     else { "Logon failed" }
                 }
@@ -418,8 +441,9 @@ function ConvertTo-ProcessedEvent {
             4728 { "Member added to security-enabled group" }
             4732 { "Member added to local group" }
             4768 { "Kerberos TGT request" }
-            4769 { "Kerberos service ticket" }
-            4776 { "Credential validation" }
+            4770 { "Kerberos service ticket renewal failed" }
+            4771 { "Kerberos pre-authentication failed" }
+            4776 { "Credential validation failed" }
             default { "Event ID $($Event.Id)" }
         }
 
@@ -737,9 +761,12 @@ try {
     if (-not (Test-AdministratorPrivileges)) { throw "Run as Administrator" }
     if (-not (Test-SecurityLogAvailability)) { throw "Security log unavailable" }
 
-    $isCidr = $null -ne $cidrPrefix
-    
-    $queryXml = Get-CategoryXPathQuery -Category $Category -IpAddress $baseIp -IsCidr $isCidr
+    if ($IpAddress) {
+        $queryXml = Get-CategoryXPathQuery -Category $Category -IpAddress $baseIp -IsCidr $isCidr
+    } else {
+        $queryXml = Get-FailedAuthXPathQuery
+        Write-Host "Collecting all failed authentication events..." -ForegroundColor Yellow
+    }
     
     $rawEvents = Get-WinEvent -FilterXml ([xml]$queryXml) -MaxEvents $MaxEvents -ErrorAction Stop
 
@@ -774,8 +801,9 @@ try {
     }
 
     if ($rawEvents.Count -eq 0) {
-        Set-Content -Path $OutputPath -Value "No events found for: $IpAddress" -Encoding UTF8
-        Write-Host "`n⚠️ No events found for: $IpAddress" -ForegroundColor Yellow
+        $msg = if ($IpAddress) { "No events found for: $IpAddress" } else { "No failed authentication events found in the specified time period." }
+        Set-Content -Path $OutputPath -Value $msg -Encoding UTF8
+        Write-Host "`n⚠️ $msg" -ForegroundColor Yellow
         exit 0
     }
 
