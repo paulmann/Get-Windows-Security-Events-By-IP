@@ -1,65 +1,83 @@
 <#
 .SYNOPSIS
-    Retrieves Windows Security events referencing a specific IP address, CIDR range, or all failed authentication attempts.
+ Retrieves Windows Security events referencing a specific IP address, CIDR range, or all failed authentication attempts.
 
 .DESCRIPTION
-    Full-featured security event analyzer with time filtering, CIDR support,
-    multiple output formats (Text, CSV, JSON, Markdown, HTML, MySQL), and compliance-ready reporting.
-    If IpAddress is not specified, collects all failed authentication, logon, and resource access attempts.
+ Full-featured security event analyzer with time filtering, CIDR support,
+ multiple output formats (Text, CSV, JSON, Markdown, HTML, MySQL), and compliance-ready reporting.
+ If IpAddress is not specified, collects all failed authentication, logon, and resource access attempts.
 
 .PARAMETER IpAddress
-    Optional. IP address or CIDR range (e.g., 192.168.1.100, 10.0.0.0/24, ::1, 2001:db8::/64).
-    If omitted, collects all failed authentication events from any IP.
+ Optional. IP address or CIDR range (e.g., 192.168.1.100, 10.0.0.0/24, ::1, 2001:db8::/64).
+ If omitted, collects all failed authentication events from any IP.
 
 .PARAMETER Category
-    Event category: RDP, FileShare, Authentication, AllEvents. Default: 'RDP'.
-    Ignored when IpAddress is not specified.
+ Event category: RDP, FileShare, Authentication, AllEvents. Default: 'AllEvents' when IpAddress is provided.
+ Ignored when IpAddress is not specified.
 
 .PARAMETER OutputPath
-    Output file path. Default: "C:\security_events_by_ip.txt".
+ Output file path. If not specified, outputs to screen only.
+ Format is auto-detected from file extension (.txt, .csv, .json, .md, .html, .sql)
 
 .PARAMETER MaxEvents
-    Maximum number of events to process. Default: 1000.
+ Maximum number of events to process. Default: 1000.
 
 .PARAMETER Decode
-    Decode status codes? Values: 'Yes' (default) or 'No'.
+ Decode status codes? Values: 'Yes' (default) or 'No'.
 
 .PARAMETER ShowColumns
-    Explicitly specify columns to display.
+ Explicitly specify columns to display.
 
 .PARAMETER HideColumns
-    Specify columns to hide.
+ Specify columns to hide.
 
 .PARAMETER LastHours
-    Filter events from the last N hours.
+ Filter events from the last N hours.
 
 .PARAMETER LastDays
-    Filter events from the last N days.
+ Filter events from the last N days.
 
 .PARAMETER StartTime
-    Start time for filtering.
+ Start time for filtering.
 
 .PARAMETER EndTime
-    End time for filtering.
+ End time for filtering.
 
 .PARAMETER OutputFormat
-    Output format: Text, CSV, JSON, Markdown, HTML, MySQL. Default: Text.
+ Output format: Text, CSV, JSON, Markdown, HTML, MySQL. 
+ Auto-detected from file extension if OutputPath is provided.
 
 .PARAMETER ShowOutput
-    Display results in console (in addition to file export).
+ Display results in console (in addition to file export).
+
+.PARAMETER Help
+ Display help information with usage examples.
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputFormat HTML -ShowOutput
-    Collects all failed authentication events from the last 7 days
+ .\Get-SecurityEventsByIP.ps1 -Help
+ Shows help with usage examples
 
 .EXAMPLE
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -Category RDP -OutputFormat CSV
-    Collects RDP events from specific CIDR range
+ .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100"
+ Shows all events for specific IP on screen (all fields, all event codes)
+
+.EXAMPLE
+ .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.html"
+ Saves all events for specific IP to HTML file (format auto-detected)
+
+.EXAMPLE
+ .\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputFormat HTML -ShowOutput
+ Collects all failed authentication events from the last 7 days
+
+.EXAMPLE
+ .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -Category RDP -OutputPath "rdp_events.csv"
+ Collects RDP events from specific CIDR range and saves to CSV
 
 .NOTES
-    Author: Mikhail Deynekin
-    Email: mid1977@gmail.com
-    Version: 4.1 (Added collection of all failed auth events when IpAddress is not specified  + MySQL export + ShowOutput)
+ Author: Mikhail Deynekin
+ Email: mid1977@gmail.com
+ Website: https://deynekin.com
+ Version: 4.2 (added -Help, auto-detect format, improved defaults)
 #>
 
 #Requires -RunAsAdministrator
@@ -71,11 +89,10 @@ param (
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('RDP', 'FileShare', 'Authentication', 'AllEvents')]
-    [string]$Category = 'RDP',
+    [string]$Category,
 
     [Parameter(Mandatory = $false)]
-    [ValidateNotNullOrEmpty()]
-    [string]$OutputPath = "C:\security_events_by_ip.txt",
+    [string]$OutputPath,
 
     [Parameter(Mandatory = $false)]
     [ValidateRange(1, 100000)]
@@ -105,17 +122,135 @@ param (
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('Text', 'CSV', 'JSON', 'Markdown', 'HTML', 'MySQL')]
-    [string]$OutputFormat = 'Text',
+    [string]$OutputFormat,
 
     [Parameter(Mandatory = $false)]
-    [switch]$ShowOutput
+    [switch]$ShowOutput,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Help
 )
+
+# === Show Help ===
+if ($Help) {
+    Write-Host @"
+
++------------------------------------------------------------------------------+
+�         Get-SecurityEventsByIP.ps1 - Usage Examples & Quick Start           �
++------------------------------------------------------------------------------+
+
+BASIC USAGE:
+------------
+
+1. Search for specific IP (all fields, all event codes, output to screen):
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100"
+
+2. Search for IP and save to file (format auto-detected from extension):
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.csv"
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.html"
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.json"
+
+3. Search CIDR range:
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -OutputPath "network.html"
+
+4. Get all failed authentication events (no IP filter):
+   .\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputPath "failed_logins.html"
+
+ADVANCED USAGE:
+---------------
+
+5. Filter by time range:
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.5" -LastHours 24
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.5" -StartTime "2025-01-01" -EndTime "2025-01-31"
+
+6. Filter by category (when IP is specified):
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -Category RDP
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -Category FileShare
+
+7. Show only specific columns:
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -ShowColumns TimeCreated,Account,Result
+
+8. Hide specific columns:
+   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -HideColumns Port,AuthPackage
+
+9. Export to MySQL format:
+   .\Get-SecurityEventsByIP.ps1 -LastDays 30 -OutputPath "events.sql" -OutputFormat MySQL
+
+10. Save to file AND show on screen:
+    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.html" -ShowOutput
+
+FILE FORMAT AUTO-DETECTION:
+---------------------------
+.txt  ? Text format
+.csv  ? CSV format
+.json ? JSON format
+.md   ? Markdown format
+.html ? HTML format
+.sql  ? MySQL format
+
+AVAILABLE COLUMNS:
+------------------
+TimeCreated, EventId, Account, SourceIP, Computer, Port, LogonType, 
+AuthPackage, LogonProcess, Status, SubStatus, Message, Result
+
+NOTES:
+------
+� Script requires Administrator privileges
+� Default MaxEvents: 1000 (use -MaxEvents to change)
+� When no OutputPath specified, results display on screen only
+� Format is auto-detected from file extension
+� Use -Help to show this help message
+
+EXAMPLES FOR INCIDENT RESPONSE:
+-------------------------------
+� Find all failed login attempts from suspicious IP:
+  .\Get-SecurityEventsByIP.ps1 -IpAddress "203.0.113.50" -OutputPath "incident.html"
+
+� Audit RDP connections from specific network:
+  .\Get-SecurityEventsByIP.ps1 -IpAddress "10.20.30.0/24" -Category RDP -LastDays 7
+
+� Export all failed authentications for compliance:
+  .\Get-SecurityEventsByIP.ps1 -LastDays 30 -OutputPath "compliance_report.html"
+
+For more information: https://deynekin.com
+
+"@ -ForegroundColor Cyan
+    exit 0
+}
 
 # === IP and Time Validation ===
 $ipParsed = $null
 $cidrPrefix = $null
 $isCidr = $false
 $baseIp = $null
+
+# Auto-detect format from file extension if OutputPath is provided
+if ($OutputPath -and -not $OutputFormat) {
+    $extension = [System.IO.Path]::GetExtension($OutputPath).ToLower()
+    $OutputFormat = switch ($extension) {
+        '.txt'  { 'Text' }
+        '.csv'  { 'CSV' }
+        '.json' { 'JSON' }
+        '.md'   { 'Markdown' }
+        '.html' { 'HTML' }
+        '.sql'  { 'MySQL' }
+        default { 'Text' }
+    }
+    Write-Host "Auto-detected output format: $OutputFormat from extension: $extension" -ForegroundColor Cyan
+}
+
+# Set default format if still not set
+if (-not $OutputFormat) {
+    $OutputFormat = 'Text'
+}
+
+# Set default Category to AllEvents when IpAddress is provided and Category not specified
+if ($IpAddress -and -not $PSBoundParameters.ContainsKey('Category')) {
+    $Category = 'AllEvents'
+    Write-Host "Using default category: AllEvents (showing all event types)" -ForegroundColor Cyan
+} elseif (-not $Category) {
+    $Category = 'RDP'
+}
 
 if ($IpAddress) {
     if ($IpAddress -match '^([0-9a-f:.]+)(?:/(\d+))?$') {
@@ -211,7 +346,7 @@ function Get-FailedAuthXPathQuery {
 <QueryList>
   <Query Id="0" Path="Security">
     <Select Path="Security">
-      *[System[(EventID=4625 or EventID=4771 or EventID=4776 or EventID=4768 or EventID=4770)]] 
+      *[System[(EventID=4625 or EventID=4771 or EventID=4776 or EventID=4768 or EventID=4770)]]
     </Select>
   </Query>
 </QueryList>
@@ -220,7 +355,7 @@ function Get-FailedAuthXPathQuery {
 
 function Get-CategoryXPathQuery {
     param([string]$Category, [string]$IpAddress, [bool]$IsCidr)
-    
+
     if ($IsCidr) {
         $xpath = switch ($Category) {
             'RDP' { "*[System[(EventID=4624 or EventID=4625)]] and *[EventData[Data[@Name='LogonType']='10']]" }
@@ -277,15 +412,15 @@ function Export-MySQL {
         [string]$Path,
         [string[]]$DisplayColumns
     )
-    
+
     $dir = Split-Path $Path -Parent
     if ($dir -and -not (Test-Path $dir)) { 
         New-Item -Path $dir -ItemType Directory -Force | Out-Null 
     }
-    
+
     $tableName = "security_events"
     $sqlCommands = @()
-    
+
     $columnDefinitions = @()
     $columnDefinitions += "id INT AUTO_INCREMENT PRIMARY KEY"
     $columnDefinitions += "time_created DATETIME"
@@ -303,9 +438,9 @@ function Export-MySQL {
     $columnDefinitions += "result TEXT"
     $columnDefinitions += "record_id BIGINT"
     $columnDefinitions += "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-    
+
     $createTableSQL = @"
-CREATE TABLE IF NOT EXISTS `$tableName` (
+CREATE TABLE IF NOT EXISTS ``$tableName`` (
     $($columnDefinitions -join ",`n    ")
 );
 "@
@@ -315,15 +450,15 @@ CREATE TABLE IF NOT EXISTS `$tableName` (
     foreach ($event in $Events) {
         $columns = @()
         $values = @()
-        
+
         foreach ($prop in $event.PSObject.Properties) {
             if ($prop.Name -eq 'PSTypeName') { continue }
-            
+
             $value = $prop.Value
             if ($null -eq $value) { $value = '' }
-            
+
             $escapedValue = $value.ToString().Replace("'", "''").Replace("\", "\\")
-            
+
             switch ($prop.Name) {
                 'TimeCreated' { 
                     $columns += 'time_created'
@@ -383,16 +518,18 @@ CREATE TABLE IF NOT EXISTS `$tableName` (
                 }
             }
         }
-        
-        $insertSQL = "INSERT INTO `$tableName` ($($columns -join ', ')) VALUES ($($values -join ', '));"
+
+        $insertSQL = "INSERT INTO ``$tableName`` ($($columns -join ', ')) VALUES ($($values -join ', '));"
         $sqlCommands += $insertSQL
     }
-    
+
     $sqlCommands += ""
-    $sqlCommands += "-- Total events: $($Events.Count)"
+    $sqlCommands += "-- Total events: $(@($Events).Count)"
     $sqlCommands += "-- Generated on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     $sqlCommands += "-- Script: Get-SecurityEventsByIP.ps1"
-    
+    $sqlCommands += "-- Author: Mikhail Deynekin (mid1977@gmail.com)"
+    $sqlCommands += "-- Website: https://deynekin.com"
+
     $sqlCommands | Set-Content -Path $Path -Encoding UTF8
 }
 
@@ -424,7 +561,7 @@ function ConvertTo-ProcessedEvent {
                     if ($eventFailureReason) { $parts += "FailureReason=$eventFailureReason" }
                     if ($eventStatus -ne "") { $parts += "Status=$eventStatus" }
                     if ($eventSubStatus -ne "") { $parts += "SubStatus=$eventSubStatus" }
-                    if ($parts.Count -eq 0) { "Logon failed" } else { "Logon failed: $($parts -join '; ')" }
+                    if (@($parts).Count -eq 0) { "Logon failed" } else { "Logon failed: $($parts -join '; ')" }
                 } else {
                     if ($eventFailureReason -and $FailureReasons.ContainsKey($eventFailureReason)) { "Logon failed: $($FailureReasons[$eventFailureReason])" }
                     elseif ($eventStatus -and $StatusCodes.ContainsKey($eventStatus)) { "Logon failed: $($StatusCodes[$eventStatus])" }
@@ -448,34 +585,34 @@ function ConvertTo-ProcessedEvent {
         }
 
         $logonTypeDescription = switch ($eventLogonType) {
-            "2"  { "Interactive (2)" }
-            "3"  { "Network (3)" }
-            "4"  { "Batch (4)" }
-            "5"  { "Service (5)" }
-            "7"  { "Unlock (7)" }
-            "8"  { "NetworkCleartext (8)" }
-            "9"  { "NewCredentials (9)" }
+            "2" { "Interactive (2)" }
+            "3" { "Network (3)" }
+            "4" { "Batch (4)" }
+            "5" { "Service (5)" }
+            "7" { "Unlock (7)" }
+            "8" { "NetworkCleartext (8)" }
+            "9" { "NewCredentials (9)" }
             "10" { "RemoteInteractive/RDP (10)" }
             "11" { "CachedInteractive (11)" }
             default { $eventLogonType }
         }
 
         return [PSCustomObject]@{
-            PSTypeName      = 'SecurityEvent.IPAnalysis'
-            TimeCreated     = $Event.TimeCreated
-            EventId         = $Event.Id
-            Account         = $fullAccount
-            SourceIP        = $eventSourceIp
-            Computer        = $eventComputer
-            Port            = $eventIpPort
-            LogonType       = $logonTypeDescription
-            AuthPackage     = $eventAuthPackage
-            LogonProcess    = $eventLogonProcess
-            Status          = $eventStatus
-            SubStatus       = $eventSubStatus
-            Message         = $eventMessage
-            RecordId        = $Event.RecordId
-            Result          = $eventResult
+            PSTypeName = 'SecurityEvent.IPAnalysis'
+            TimeCreated = $Event.TimeCreated
+            EventId = $Event.Id
+            Account = $fullAccount
+            SourceIP = $eventSourceIp
+            Computer = $eventComputer
+            Port = $eventIpPort
+            LogonType = $logonTypeDescription
+            AuthPackage = $eventAuthPackage
+            LogonProcess = $eventLogonProcess
+            Status = $eventStatus
+            SubStatus = $eventSubStatus
+            Message = $eventMessage
+            RecordId = $Event.RecordId
+            Result = $eventResult
         }
     } catch {
         Write-Warning "Failed to process event RecordId=$($Event.RecordId): $_"
@@ -490,16 +627,16 @@ function Get-ColumnsToDisplay {
 
     $invalidShow = $show | Where-Object { $_ -notin $AllColumns }
     $invalidHide = $hide | Where-Object { $_ -notin $AllColumns }
-    if ($invalidShow) { throw "Invalid -ShowColumns: $($invalidShow -join ', ')" }
-    if ($invalidHide) { throw "Invalid -HideColumns: $($invalidHide -join ', ')" }
+    if ($invalidShow) { throw "Invalid -ShowColumns: $($invalidShow -join ', '). Available columns: $($AllColumns -join ', ')" }
+    if ($invalidHide) { throw "Invalid -HideColumns: $($invalidHide -join ', '). Available columns: $($AllColumns -join ', ')" }
 
-    if ($show.Count -gt 0) {
+    if (@($show).Count -gt 0) {
         $cols = $show | Select-Object -Unique
         if ($cols -contains 'Result') { $cols = @($cols | Where-Object { $_ -ne 'Result' }) + @('Result') }
         return $cols
     } else {
         $cols = $AllColumns
-        if ($hide.Count -gt 0) { $cols = $cols | Where-Object { $_ -notin $hide } }
+        if (@($show).Count -gt 0) { $cols = $cols | Where-Object { $_ -notin $hide } }
         if ($cols -contains 'Result') { $cols = @($cols | Where-Object { $_ -ne 'Result' }) + @('Result') }
         return $cols
     }
@@ -510,18 +647,18 @@ function Get-SummaryStatistics {
     $minTime = ($Events | Measure-Object TimeCreated -Minimum).Minimum
     $maxTime = ($Events | Measure-Object TimeCreated -Maximum).Maximum
 
-    $eventIdGroups = $Events | Group-Object EventId | Sort-Object Count -Descending
-    $accountGroups = $Events | Group-Object Account | Sort-Object Count -Descending | Select-Object -First 10
-    $ipGroups = $Events | Group-Object SourceIP | Sort-Object Count -Descending
-    $logonTypeGroups = $Events | Group-Object LogonType | Sort-Object Count -Descending
+	$eventIdGroups = @($Events | Group-Object EventId | Sort-Object Count -Descending)
+	$accountGroups = @($Events | Group-Object Account | Sort-Object Count -Descending | Select-Object -First 10)
+	$ipGroups = @($Events | Group-Object SourceIP | Sort-Object Count -Descending)
+	$logonTypeGroups = @($Events | Group-Object LogonType | Sort-Object Count -Descending)
 
     return [PSCustomObject]@{
-        TotalEvents = $Events.Count
+        TotalEvents = @($Events).Count
         PeriodStart = $minTime
-        PeriodEnd   = $maxTime
+        PeriodEnd = $maxTime
         EventIdGroups = $eventIdGroups
         AccountGroups = $accountGroups
-        IpGroups      = $ipGroups
+        IpGroups = $ipGroups
         LogonTypeGroups = $logonTypeGroups
     }
 }
@@ -553,65 +690,74 @@ function Export-Results {
         'MySQL' {
             Export-MySQL -Events $Events -Path $Path -DisplayColumns $DisplayColumns
         }
-        'Markdown' {
-            $lines = @()
-            $lines += "# Security Events Report"
-            $lines += ""
-            $lines += "## Summary"
-            $lines += ""
-            $lines += "- **Total events**: $($stats.TotalEvents)"
-            $lines += "- **Period**: $($stats.PeriodStart) - $($stats.PeriodEnd)"
-            $lines += ""
+	'Markdown' {
+	    $lines = @()
+	    $lines += "# Security Events Report"
+	    $lines += ""
+	    $lines += "## Summary"
+	    $lines += "- **Total events**: $(@($Events).Count)"
+	    $lines += "- **Period**: $($stats.PeriodStart) - $($stats.PeriodEnd)"
+	    $lines += ""
 
-            $lines += "### EventID Distribution"
-            $lines += ""
-            $lines += "| EventID | Count |"
-            $lines += "|---------|-------|"
-            foreach ($item in $stats.EventIdGroups) {
-                $lines += "| $($item.Name) | $($item.Count) |"
-            }
-            $lines += ""
+	    if (@($stats.EventIdGroups).Count -gt 0) {
+	        $lines += "## EventID Distribution"
+	        $lines += "| EventID | Count |"
+	        $lines += "|---------|-------|"
+	        foreach ($item in $stats.EventIdGroups) {
+	            $itemCount = $item.Count
+	            $lines += "| $($item.Name) | $itemCount |"
+	        }
+	        $lines += ""
+	    }
 
-            $lines += "### LogonType Distribution"
-            $lines += ""
-            $lines += "| LogonType | Count |"
-            $lines += "|-----------|-------|"
-            foreach ($item in $stats.LogonTypeGroups) {
-                $lines += "| $($item.Name) | $($item.Count) |"
-            }
-            $lines += ""
+	    if (@($stats.LogonTypeGroups).Count -gt 0) {
+	        $lines += "## LogonType Distribution"
+	        $lines += "| LogonType | Count |"
+	        $lines += "|-----------|-------|"
+	        foreach ($item in $stats.LogonTypeGroups) {
+	            $itemCount = $item.Count
+	            $lines += "| $($item.Name) | $itemCount |"
+	        }
+	        $lines += ""
+	    }
 
-            $lines += "### Top Accounts"
-            $lines += ""
-            $lines += "| Account | Count |"
-            $lines += "|---------|-------|"
-            foreach ($item in $stats.AccountGroups) {
-                $lines += "| $($item.Name) | $($item.Count) |"
-            }
-            $lines += ""
-            $lines += "## Events"
-            $lines += ""
-            $lines += "| " + ($DisplayColumns -join " | ") + " |"
-            $lines += "| " + ($DisplayColumns | ForEach-Object { "---" }) -join " | " + " |"
-            foreach ($event in $Events) {
-                $row = $event | Select-Object $DisplayColumns
-                $values = @()
-                foreach ($prop in $row.PSObject.Properties) {
-                    $val = if ($null -eq $prop.Value) { '' } else { $prop.Value.ToString() -replace '\|', '\|' }
-                    $values += $val
-                }
-                $lines += "| " + ($values -join " | ") + " |"
-            }
-            $lines | Set-Content -Path $Path -Encoding UTF8
-        }
+	    if (@($stats.AccountGroups).Count -gt 0) {
+	        $lines += "## Top Accounts"
+	        $lines += "| Account | Count |"
+	        $lines += "|---------|-------|"
+	        foreach ($item in $stats.AccountGroups) {
+	            $itemCount = $item.Count
+	            $lines += "| $($item.Name) | $itemCount |"
+	        }
+	        $lines += ""
+	    }
+
+	    $lines += "## Events"
+	    $lines += "| " + ($DisplayColumns -join " | ") + " |"
+	    $lines += "| " + ($DisplayColumns | ForEach-Object { "---" }) -join " | " + " |"
+
+	    foreach ($event in @($Events)) {
+	        $row = $event | Select-Object $DisplayColumns
+	        $values = @()
+	        foreach ($prop in $row.PSObject.Properties) {
+	            $val = if ($null -eq $prop.Value) { '' } else { $prop.Value.ToString() }
+	            $values += $val
+	        }
+	        $lines += "| " + ($values -join " | ") + " |"
+	    }
+
+	    $lines | Set-Content -Path $Path -Encoding UTF8
+	}
         'HTML' {
-            $eventIdLabels = ($stats.EventIdGroups | ForEach-Object { "'Event $($_.Name)'" }) -join ', '
-            $eventIdData = ($stats.EventIdGroups | ForEach-Object { $_.Count }) -join ', '
-            $logonTypeLabels = ($stats.LogonTypeGroups | ForEach-Object { "'$($_.Name)'" }) -join ', '
-            $logonTypeData = ($stats.LogonTypeGroups | ForEach-Object { $_.Count }) -join ', '
+
+		$eventIdLabels = ($stats.EventIdGroups | ForEach-Object { "'Event $($_.Name)'" }) -join ', '
+		$eventIdData = ($stats.EventIdGroups | ForEach-Object { $_.Count }) -join ', '
+
+		$logonTypeLabels = ($stats.LogonTypeGroups | ForEach-Object { "'$($_.Name)'" }) -join ', '
+		$logonTypeData = ($stats.LogonTypeGroups | ForEach-Object { $_.Count }) -join ', '
 
             $accountRows = foreach ($item in $stats.AccountGroups) {
-                "<tr><td>$($item.Name)</td><td>$($item.Count)</td></tr>"
+                "<tr><td>$($item.Name)</td><td>$($item.Count)</td></tr>`n"
             }
 
             $eventRows = foreach ($event in $Events) {
@@ -619,12 +765,12 @@ function Export-Results {
                 $cells = foreach ($prop in $row.PSObject.Properties) {
                     $val = if ($null -eq $prop.Value) { '' } else { $prop.Value.ToString() }
                     if ($val -like "*failed*") {
-                        "<td class='danger'>$val</td>"
+                        "<td style='color: #d9534f;'>$val</td>"
                     } else {
                         "<td>$val</td>"
                     }
                 }
-                "<tr>$($cells -join '')</tr>"
+                "<tr>$($cells -join '')</tr>`n"
             }
 
             $headerRow = ($DisplayColumns | ForEach-Object { "<th>$_</th>" }) -join ''
@@ -638,84 +784,91 @@ function Export-Results {
     <title>Security Events Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --bg: #fff; --text: #333; --card: #f8f9fa; --border: #dee2e6; --danger: #dc3545; }
-        @media (prefers-color-scheme: dark) {
-            :root { --bg: #121212; --text: #e0e0e0; --card: #1e1e1e; --border: #333; }
-        }
-        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 1600px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); }
-        th { background: var(--card); }
-        .danger { color: var(--danger); font-weight: bold; }
-        .chart-container { height: 250px; margin-top: 10px; }
-        h2 { border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f5f5f5; }
+        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        h2, h3 { color: #555; }
+        .summary { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .chart-container { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 20px 0; }
+        th { background: #007bff; color: white; padding: 12px; text-align: left; position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        tr:hover { background: #f8f9fa; }
+        .failed { color: #d9534f; font-weight: bold; }
+        .footer { text-align: center; margin-top: 30px; color: #777; font-size: 0.9em; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Security Events Report</h1>
-            <p>Generated on $(Get-Date -Format 'yyyy-MM-dd HH:mm')</p>
+    <h1>Security Events Report</h1>
+    <p style="color: #666;">Generated on $(Get-Date -Format 'yyyy-MM-dd HH:mm') | Author: Mikhail Deynekin | <a href="https://deynekin.com">deynekin.com</a></p>
+
+    <div class="summary">
+        <h2>Summary</h2>
+        <p><strong>Total events:</strong> $($stats.TotalEvents)</p>
+        <p><strong>Period:</strong> $($stats.PeriodStart) � $($stats.PeriodEnd)</p>
+    </div>
+
+    <div class="charts">
+        <div class="chart-container">
+            <h3>EventID Distribution</h3>
+            <canvas id="eventIdChart"></canvas>
         </div>
-
-        <div class="grid">
-            <div class="card">
-                <h3>Summary</h3>
-                <p><strong>Total events:</strong> $($stats.TotalEvents)</p>
-                <p><strong>Period:</strong> $($stats.PeriodStart) — $($stats.PeriodEnd)</p>
-            </div>
-            <div class="card">
-                <h3>EventID Distribution</h3>
-                <div class="chart-container"><canvas id="eventIdChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h3>LogonType Distribution</h3>
-                <div class="chart-container"><canvas id="logonTypeChart"></canvas></div>
-            </div>
+        <div class="chart-container">
+            <h3>LogonType Distribution</h3>
+            <canvas id="logonTypeChart"></canvas>
         </div>
+    </div>
 
-        <h2>Top Accounts</h2>
-        <table>
-            <thead><tr><th>Account</th><th>Count</th></tr></thead>
-            <tbody>$($accountRows -join '')</tbody>
-        </table>
+    <h2>Top Accounts</h2>
+    <table>
+        <thead>
+            <tr><th>Account</th><th>Count</th></tr>
+        </thead>
+        <tbody>
+            $($accountRows -join '')
+        </tbody>
+    </table>
 
-        <h2>Events</h2>
-        <table>
-            <thead><tr>$headerRow</tr></thead>
-            <tbody>$($eventRows -join '')</tbody>
-        </table>
+    <h2>Events</h2>
+    <table>
+        <thead>
+            <tr>$headerRow</tr>
+        </thead>
+        <tbody>
+            $($eventRows -join '')
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Generated by Get-SecurityEventsByIP.ps1 | Mikhail Deynekin (mid1977@gmail.com) | <a href="https://deynekin.com">https://deynekin.com</a></p>
     </div>
 
     <script>
-        const eventIdCtx = document.getElementById('eventIdChart').getContext('2d');
-        new Chart(eventIdCtx, {
-            type: 'pie',
+        new Chart(document.getElementById('eventIdChart'), {
+            type: 'bar',
             data: {
                 labels: [$eventIdLabels],
                 datasets: [{
+                    label: 'Event Count',
                     data: [$eventIdData],
-                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0']
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: true }
         });
 
-        const logonTypeCtx = document.getElementById('logonTypeChart').getContext('2d');
-        new Chart(logonTypeCtx, {
-            type: 'doughnut',
+        new Chart(document.getElementById('logonTypeChart'), {
+            type: 'pie',
             data: {
                 labels: [$logonTypeLabels],
                 datasets: [{
                     data: [$logonTypeData],
-                    backgroundColor: ['#ff9f40', '#ffcd56', '#4bc0c0', '#ff6384', '#36a2eb']
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: true }
         });
     </script>
 </body>
@@ -758,18 +911,62 @@ $($stats.AccountGroups | Format-Table Name, Count -AutoSize | Out-String)
 #region Main Logic
 
 try {
-    if (-not (Test-AdministratorPrivileges)) { throw "Run as Administrator" }
-    if (-not (Test-SecurityLogAvailability)) { throw "Security log unavailable" }
+    if (-not (Test-AdministratorPrivileges)) { 
+        Write-Host "`n[ERROR] This script requires Administrator privileges." -ForegroundColor Red
+        Write-Host "        Please run PowerShell as Administrator and try again." -ForegroundColor Yellow
+        Write-Host "`nHow to run as Administrator:" -ForegroundColor Cyan
+        Write-Host "  1. Right-click PowerShell icon" -ForegroundColor White
+        Write-Host "  2. Select 'Run as Administrator'" -ForegroundColor White
+        Write-Host "  3. Run the script again" -ForegroundColor White
+        exit 1
+    }
 
+    if (-not (Test-SecurityLogAvailability)) { 
+        Write-Host "`n[ERROR] Security event log is not available or not enabled." -ForegroundColor Red
+        Write-Host "        Please check Event Viewer to ensure Security log is accessible." -ForegroundColor Yellow
+        exit 1
+    }
+
+    # Build query based on parameters
     if ($IpAddress) {
         $queryXml = Get-CategoryXPathQuery -Category $Category -IpAddress $baseIp -IsCidr $isCidr
+        Write-Host "Searching for IP address: $IpAddress (Category: $Category)" -ForegroundColor Cyan
     } else {
         $queryXml = Get-FailedAuthXPathQuery
         Write-Host "Collecting all failed authentication events..." -ForegroundColor Yellow
     }
-    
-    $rawEvents = Get-WinEvent -FilterXml ([xml]$queryXml) -MaxEvents $MaxEvents -ErrorAction Stop
 
+    # Execute query with proper error handling
+    try {
+        $rawEvents = Get-WinEvent -FilterXml ([xml]$queryXml) -MaxEvents $MaxEvents -ErrorAction Stop
+    } catch {
+        if ($_.Exception.Message -match "No events were found") {
+            $msg = if ($IpAddress) { 
+                "No events found for IP address: $IpAddress" 
+            } else { 
+                "No failed authentication events found in the specified time period." 
+            }
+
+            if ($OutputPath) {
+                Set-Content -Path $OutputPath -Value $msg -Encoding UTF8
+                Write-Host "`n??  $msg" -ForegroundColor Yellow
+                Write-Host "    Empty result saved to: $OutputPath" -ForegroundColor Cyan
+            } else {
+                Write-Host "`n??  $msg" -ForegroundColor Yellow
+            }
+
+            Write-Host "`nTips:" -ForegroundColor Cyan
+            Write-Host "  � Check if the IP address is correct" -ForegroundColor White
+            Write-Host "  � Try expanding the time range with -LastDays or -LastHours" -ForegroundColor White
+            Write-Host "  � Verify events exist in Event Viewer (Security log)" -ForegroundColor White
+            Write-Host "  � Try -Category AllEvents for broader search" -ForegroundColor White
+            exit 0
+        } else {
+            throw
+        }
+    }
+
+    # Apply time filtering if specified
     if ($finalStartTime -or $finalEndTime) {
         $rawEvents = $rawEvents | Where-Object {
             $evtTime = $_.TimeCreated
@@ -778,15 +975,16 @@ try {
         }
     }
 
+    # Apply CIDR filtering if needed
     if ($isCidr) {
         $networkBytes = $ipParsed.GetAddressBytes()
         $addressFamily = $ipParsed.AddressFamily
         $filteredEvents = @()
-        
+
         foreach ($event in $rawEvents) {
             $ipStr = Get-EventDataByName -Event $event -FieldName 'IpAddress' -DefaultValue ""
             if ($ipStr -eq "N/A" -or $ipStr -eq "::1" -or $ipStr -eq "127.0.0.1") { continue }
-            
+
             $evtIp = $null
             if ([System.Net.IPAddress]::TryParse($ipStr, [ref]$evtIp)) {
                 if ($evtIp.AddressFamily -eq $addressFamily) {
@@ -800,13 +998,26 @@ try {
         $rawEvents = $filteredEvents
     }
 
-    if ($rawEvents.Count -eq 0) {
-        $msg = if ($IpAddress) { "No events found for: $IpAddress" } else { "No failed authentication events found in the specified time period." }
-        Set-Content -Path $OutputPath -Value $msg -Encoding UTF8
-        Write-Host "`n⚠️ $msg" -ForegroundColor Yellow
+    # Check if any events remain after filtering
+    if (@($rawEvents).Count -eq 0) {
+        $msg = if ($IpAddress) { 
+            "No events found for IP address: $IpAddress after applying filters" 
+        } else { 
+            "No failed authentication events found matching the criteria." 
+        }
+
+        if ($OutputPath) {
+            Set-Content -Path $OutputPath -Value $msg -Encoding UTF8
+            Write-Host "`n??  $msg" -ForegroundColor Yellow
+            Write-Host "    Empty result saved to: $OutputPath" -ForegroundColor Cyan
+        } else {
+            Write-Host "`n??  $msg" -ForegroundColor Yellow
+        }
         exit 0
     }
 
+    # Process events
+    Write-Host "Processing $(@($rawEvents).Count) events..." -ForegroundColor Cyan
     $processed = @()
     $shouldDecode = ($Decode -eq 'Yes')
     foreach ($e in $rawEvents) {
@@ -814,25 +1025,41 @@ try {
         if ($p) { $processed += $p }
     }
 
-    if ($processed.Count -eq 0) { throw "No events processed" }
+    if (@($rawEvents).Count -eq 0) {
+        Write-Host "`n[ERROR] No events could be processed." -ForegroundColor Red
+        exit 1
+    }
 
+    # Determine columns to display
     $columns = Get-ColumnsToDisplay -ShowColumns $ShowColumns -HideColumns $HideColumns -AllColumns $AllPossibleColumns
-    Export-Results -Events $processed -Path $OutputPath -Format $OutputFormat -DisplayColumns $columns
 
-    if ($ShowOutput) {
-        Write-Host "`n" + ("=" * 80) -ForegroundColor Cyan
-        Write-Host "SECURITY EVENTS (first 20 shown)" -ForegroundColor Cyan
-        Write-Host ("=" * 80) -ForegroundColor Cyan
-        $processed | Select-Object -First 20 | Format-Table -AutoSize -Wrap -Property $columns
-        Write-Host ("=" * 80) -ForegroundColor Cyan
-        Write-Host "Total events: $($processed.Count) | Saved to: $OutputPath" -ForegroundColor Green
+    # Export or display results
+    if ($OutputPath) {
+        Export-Results -Events $processed -Path $OutputPath -Format $OutputFormat -DisplayColumns $columns
+        Write-Host "`n? Results saved to: $OutputPath" -ForegroundColor Green
+        Write-Host "   Format: $OutputFormat | Events: $(@($processed).Count)" -ForegroundColor Cyan
+
+        if ($ShowOutput) {
+            Write-Host "`n" + ("=" * 80) -ForegroundColor Cyan
+            Write-Host "SECURITY EVENTS (first 20 shown)" -ForegroundColor Cyan
+            Write-Host ("=" * 80) -ForegroundColor Cyan
+            $processed | Select-Object -First 20 | Format-Table -AutoSize -Wrap -Property $columns
+            Write-Host ("=" * 80) -ForegroundColor Cyan
+        }
     } else {
-        Write-Host "`n✅ Results saved to: $OutputPath" -ForegroundColor Green
-        Write-Host "   Format: $OutputFormat | Events: $($processed.Count)" -ForegroundColor Cyan
+        # No OutputPath specified, display on screen only
+        Write-Host "`n" + ("=" * 80) -ForegroundColor Cyan
+        Write-Host "SECURITY EVENTS" -ForegroundColor Cyan
+        Write-Host ("=" * 80) -ForegroundColor Cyan
+        $processed | Format-Table -AutoSize -Wrap -Property $columns
+        Write-Host ("=" * 80) -ForegroundColor Cyan
+        Write-Host "Total events: $(@($processed).Count)" -ForegroundColor Green
+        Write-Host "`nTip: Use -OutputPath to save results to a file" -ForegroundColor Yellow
     }
 
 } catch {
     Write-Host "`n[ERROR] $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`nFor help, run: .\Get-SecurityEventsByIP.ps1 -Help" -ForegroundColor Yellow
     exit 1
 }
 
