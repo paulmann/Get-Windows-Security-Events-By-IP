@@ -564,10 +564,10 @@ This requirements section accurately reflects the current capabilities of the se
 #### 🔹 **Option 1: Direct Script Download (Quick Start)**
 ```powershell
 ## Download the script to current directory
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
 
 ## Or use shorter method (PowerShell 5.1+)
-wget "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
+wget "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
 ```
 
 #### 🔹 **Option 2: Manual File Creation**
@@ -1060,7 +1060,7 @@ steps:
     targetType: 'inline'
     script: |
       # Download security analysis script
-      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
+      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
       
       # Run security analysis as part of build process
       .\Get-SecurityEventsByIP.ps1 -LastHours 24 -OutputFormat JSON -OutputPath "security-scan-results.json"
@@ -1099,7 +1099,7 @@ jobs:
       
     - name: Download Security Script
       run: |
-        wget "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
+        wget "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
         
     - name: Run Security Analysis
       run: |
@@ -1214,7 +1214,7 @@ output "security_baseline_status" {
   tasks:
     - name: Download security analysis script
       win_get_url:
-        url: https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1
+        url: https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1
         dest: C:\Scripts\Get-SecurityEventsByIP.ps1
 
     - name: Execute security analysis
@@ -1391,7 +1391,7 @@ $DeploymentScript = {
     New-Item -ItemType Directory -Path "C:\Enterprise\SecurityReports" -Force
     
     # Download script
-    $ScriptUrl = "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1"
+    $ScriptUrl = "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1"
     Invoke-WebRequest -Uri $ScriptUrl -OutFile "C:\Program Files\SecurityTools\Get-SecurityEventsByIP.ps1"
     
     # Set execution policy for current user
@@ -1434,7 +1434,7 @@ $DeploymentScript = {
 }
 
 # Execute deployment across all servers
-$Results = Invoke-Command -ComputerName $Servers -ScriptBlock $DeploymentScript -ArgumentList "https://raw.githubusercontent.com/mid1977/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -ThrottleLimit 10
+$Results = Invoke-Command -ComputerName $Servers -ScriptBlock $DeploymentScript -ArgumentList "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -ThrottleLimit 10
 
 # Check deployment results
 $Successful = $Results | Where-Object { $_ -eq $true }
@@ -2907,4 +2907,3 @@ For enterprise organizations requiring commercial support, SLAs, or custom licen
 *Last updated: 21 October 2025 | Version: 4.1.0 | Enterprise Ready*
 
 </div>
-
