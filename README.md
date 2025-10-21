@@ -93,7 +93,7 @@ Originally developed for abuse reporting and security incident response, this sc
 
 ***
 
-## Features in v4.0
+## Features in v4.1
 
 Version **4.1** introduces comprehensive security event analysis with advanced filtering and multiple output formats:
 
