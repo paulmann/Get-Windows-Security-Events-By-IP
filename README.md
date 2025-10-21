@@ -2677,7 +2677,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 🔒 **Commercial Licensing**
 
-For enterprise organizations requiring commercial support, SLAs, or custom licensing terms, please contact enterprise-licensing@company.com.
+For enterprise organizations requiring commercial support, SLAs, or custom licensing terms, please contact mid1977@gmail.com.
 
 ## 🙏 Acknowledgments
 
@@ -2856,4 +2856,4 @@ For enterprise organizations requiring commercial support, SLAs, or custom licen
 *Last updated: 21 October 2025 | Version: 4.1.0 | Enterprise Ready*
 
 </div>
-```
+
