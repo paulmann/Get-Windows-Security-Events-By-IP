@@ -1,6 +1,6 @@
 # Get Windows Security Events By IP
 
-[![Version](https://img.shields.io/badge/version-4.1.0-blue.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
+[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PowerShell](https://img.shields.io/badge/powershell-5.1%2B-blue.svg)](https://docs.microsoft.com/en-us/powershell/)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%2FServer-blue.svg)](https://www.microsoft.com/windows/)
@@ -93,9 +93,9 @@ Originally developed for abuse reporting and security incident response, this sc
 
 ***
 
-## Features in v4.1
+## Features in v4.2
 
-Version **4.1** introduces comprehensive security event analysis with advanced filtering and multiple output formats:
+Version **4.2** introduces comprehensive security event analysis with advanced filtering and multiple output formats:
 
 - **Flexible IP Addressing**: Support for single IP addresses, CIDR ranges (`192.168.1.0/24`), and wildcard patterns (`192.168.*`) for both IPv4 and IPv6
 - **Comprehensive Event Collection**: When no IP is specified, automatically collects all failed authentication, logon, and resource access attempts from any IP address
