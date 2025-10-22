@@ -77,67 +77,126 @@
  Author: Mikhail Deynekin
  Email: mid1977@gmail.com
  Website: https://deynekin.com
- Version: 4.2 (added -Help, auto-detect format, improved defaults)
+ Version: 5.0.2
+ - Added -Update parameter for self-update capability
+ - Added -Version parameter
+ - Fixed all @($variable).Count issues for reliability
+ - Auto-format detection from file extension
+ - Improved error handling and user experience
 #>
 
 #Requires -RunAsAdministrator
 
-[CmdletBinding(DefaultParameterSetName = 'Default')]
+[CmdletBinding(DefaultParameterSetName = 'Operation')]
 param (
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [string]$IpAddress,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Update')]
+    [switch]$Update,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'Version')]
+    [switch]$Version,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'Help')]
+    [switch]$Help,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [ValidateSet('RDP', 'FileShare', 'Authentication', 'AllEvents')]
     [string]$Category,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [string]$OutputPath,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [ValidateRange(1, 100000)]
     [int]$MaxEvents = 1000,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [ValidateSet('Yes', 'No')]
     [string]$Decode = 'Yes',
 
-    [Parameter(Mandatory = $false, ParameterSetName = 'Show')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [string[]]$ShowColumns,
 
-    [Parameter(Mandatory = $false, ParameterSetName = 'Hide')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [string[]]$HideColumns,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [int]$LastHours,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [int]$LastDays,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [datetime]$StartTime,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [datetime]$EndTime,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
     [ValidateSet('Text', 'CSV', 'JSON', 'Markdown', 'HTML', 'MySQL')]
     [string]$OutputFormat,
 
-    [Parameter(Mandatory = $false)]
-    [switch]$ShowOutput,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$Help
+    [Parameter(Mandatory = $false, ParameterSetName = 'Operation')]
+    [switch]$ShowOutput
 )
 
-# === Show Help ===
+
+# Configuration
+$Script:Config = @{
+    Version = '5.0.2'
+    Author = 'Mikhail Deynekin'
+    Email = 'mid1977@gmail.com'
+    Website = 'https://deynekin.com'
+    UpdateUrl = 'https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/refs/heads/main/Get-SecurityEventsByIP.ps1'
+}
+
+
+# Handle -Update parameter
+if ($Update) {
+    Write-Host "`n+--------------------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "|           Script Update Check                               |" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------------+`n" -ForegroundColor Cyan
+    Write-Host "Current version: $($Script:Config.Version)" -ForegroundColor Yellow
+    Write-Host "Checking for updates from GitHub...`n" -ForegroundColor Cyan
+    try {
+        $latestScript = Invoke-WebRequest -Uri $Script:Config.UpdateUrl -UseBasicParsing -ErrorAction Stop
+        if ($latestScript.Content) {
+            $currentScriptPath = $MyInvocation.MyCommand.Path
+            if (-not $currentScriptPath) { $currentScriptPath = $PSCommandPath }
+            $backupPath = "$currentScriptPath.backup_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+            Copy-Item -Path $currentScriptPath -Destination $backupPath -Force
+            Write-Host "✅ Backup created: $backupPath" -ForegroundColor Green
+            $latestScript.Content | Set-Content -Path $currentScriptPath -Encoding UTF8 -Force
+            Write-Host "✅ Script updated successfully!" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "❌ Update failed: $_" -ForegroundColor Red
+    }
+    exit 0
+}
+
+# Handle -Version parameter
+if ($Version) {
+    Write-Host "`n+--------------------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "|           Script Version Information                         |" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------------+`n" -ForegroundColor Cyan
+    Write-Host "Version:  $($Script:Config.Version)" -ForegroundColor Green
+    Write-Host "Author:   $($Script:Config.Author)" -ForegroundColor Gray
+    Write-Host "Email:    $($Script:Config.Email)" -ForegroundColor Gray
+    Write-Host "Website:  $($Script:Config.Website)" -ForegroundColor Gray
+    Write-Host "`nTo update: .\Get-SecurityEventsByIP.ps1 -Update" -ForegroundColor Yellow
+    exit 0
+}
+
+# Handle -Help parameter
 if ($Help) {
     Write-Host @"
 
-+------------------------------------------------------------------------------+
-�         Get-SecurityEventsByIP.ps1 - Usage Examples & Quick Start           �
-+------------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+| Get-SecurityEventsByIP.ps1 - Usage Examples & Quick Start              |
++--------------------------------------------------------------------------+
 
 BASIC USAGE:
 ------------
@@ -148,7 +207,6 @@ BASIC USAGE:
 2. Search for IP and save to file (format auto-detected from extension):
    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.csv"
    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.html"
-   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "events.json"
 
 3. Search CIDR range:
    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.0/24" -OutputPath "network.html"
@@ -156,67 +214,38 @@ BASIC USAGE:
 4. Get all failed authentication events (no IP filter):
    .\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputPath "failed_logins.html"
 
+MAINTENANCE COMMANDS:
+---------------------
+
+5. Update to latest version:
+   .\Get-SecurityEventsByIP.ps1 -Update
+
+6. Check version:
+   .\Get-SecurityEventsByIP.ps1 -Version
+
+7. Show this help:
+   .\Get-SecurityEventsByIP.ps1 -Help
+
 ADVANCED USAGE:
 ---------------
 
-5. Filter by time range:
+8. Filter by time range:
    .\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.5" -LastHours 24
-   .\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.5" -StartTime "2025-01-01" -EndTime "2025-01-31"
 
-6. Filter by category (when IP is specified):
+9. Filter by category:
    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -Category RDP
-   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -Category FileShare
 
-7. Show only specific columns:
-   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -ShowColumns TimeCreated,Account,Result
+10. Export to MySQL format:
+    .\Get-SecurityEventsByIP.ps1 -LastDays 30 -OutputPath "events.sql"
 
-8. Hide specific columns:
-   .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -HideColumns Port,AuthPackage
-
-9. Export to MySQL format:
-   .\Get-SecurityEventsByIP.ps1 -LastDays 30 -OutputPath "events.sql" -OutputFormat MySQL
-
-10. Save to file AND show on screen:
-    .\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.html" -ShowOutput
-
-FILE FORMAT AUTO-DETECTION:
----------------------------
-.txt  ? Text format
-.csv  ? CSV format
-.json ? JSON format
-.md   ? Markdown format
-.html ? HTML format
-.sql  ? MySQL format
-
-AVAILABLE COLUMNS:
-------------------
-TimeCreated, EventId, Account, SourceIP, Computer, Port, LogonType, 
-AuthPackage, LogonProcess, Status, SubStatus, Message, Result
-
-NOTES:
-------
-� Script requires Administrator privileges
-� Default MaxEvents: 1000 (use -MaxEvents to change)
-� When no OutputPath specified, results display on screen only
-� Format is auto-detected from file extension
-� Use -Help to show this help message
-
-EXAMPLES FOR INCIDENT RESPONSE:
--------------------------------
-� Find all failed login attempts from suspicious IP:
-  .\Get-SecurityEventsByIP.ps1 -IpAddress "203.0.113.50" -OutputPath "incident.html"
-
-� Audit RDP connections from specific network:
-  .\Get-SecurityEventsByIP.ps1 -IpAddress "10.20.30.0/24" -Category RDP -LastDays 7
-
-� Export all failed authentications for compliance:
-  .\Get-SecurityEventsByIP.ps1 -LastDays 30 -OutputPath "compliance_report.html"
-
-For more information: https://deynekin.com
+For more information: $($Script:Config.Website)
 
 "@ -ForegroundColor Cyan
     exit 0
 }
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 # === IP and Time Validation ===
 $ipParsed = $null
@@ -303,9 +332,6 @@ $FailureReasons = @{
     '%%2313' = 'Unknown user or bad password'
     '%%2304' = 'Logon error occurred'
 }
-
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
 
 $AllPossibleColumns = @(
     'TimeCreated', 'EventId', 'Account', 'SourceIP', 'Computer', 'Port',
@@ -647,10 +673,10 @@ function Get-SummaryStatistics {
     $minTime = ($Events | Measure-Object TimeCreated -Minimum).Minimum
     $maxTime = ($Events | Measure-Object TimeCreated -Maximum).Maximum
 
-	$eventIdGroups = @($Events | Group-Object EventId | Sort-Object Count -Descending)
-	$accountGroups = @($Events | Group-Object Account | Sort-Object Count -Descending | Select-Object -First 10)
-	$ipGroups = @($Events | Group-Object SourceIP | Sort-Object Count -Descending)
-	$logonTypeGroups = @($Events | Group-Object LogonType | Sort-Object Count -Descending)
+    $eventIdGroups = @($Events | Group-Object EventId | Sort-Object Count -Descending)
+    $accountGroups = @($Events | Group-Object Account | Sort-Object Count -Descending | Select-Object -First 10)
+    $ipGroups = @($Events | Group-Object SourceIP | Sort-Object Count -Descending)
+    $logonTypeGroups = @($Events | Group-Object LogonType | Sort-Object Count -Descending)
 
     return [PSCustomObject]@{
         TotalEvents = @($Events).Count
