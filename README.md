@@ -397,12 +397,42 @@ This enhanced version provides enterprise-grade security event analysis with com
 
 ```mermaid
 graph TB
-    A[Security Event Query] --> B[Admin & Log Validation]
-    B --> C[Smart XPath Construction]
-    C --> D[Event Collection]
+    START[Script Execution] --> PARAM{Parameter Check}
+    
+    PARAM -->|"-Update"| UPDATE[Self-Update Process]
+    PARAM -->|"-Version"| VERSION[Display Version Info]
+    PARAM -->|"-Help"| HELP[Show Help & Examples]
+    PARAM -->|Operation| A[Security Event Query]
+    
+    UPDATE --> UPDATE1[Download from GitHub]
+    UPDATE1 --> UPDATE2[Create Backup]
+    UPDATE2 --> UPDATE3[Replace Script]
+    UPDATE3 --> EXIT1[Exit]
+    
+    VERSION --> VERSION1[Show v5.0.2 Info]
+    VERSION1 --> EXIT2[Exit]
+    
+    HELP --> HELP1[Display Usage Examples]
+    HELP1 --> EXIT3[Exit]
+    
+    A --> B[Admin & Log Validation]
+    B --> B1{Administrator?}
+    B1 -->|No| ERROR1[Error: Need Admin Rights]
+    B1 -->|Yes| B2{Security Log Available?}
+    B2 -->|No| ERROR2[Error: Log Not Available]
+    B2 -->|Yes| C[Smart XPath Construction]
+    
+    C --> AUTODETECT{Auto-Detect Format?}
+    AUTODETECT -->|OutputPath exists| DETECT[Detect from Extension]
+    AUTODETECT -->|No OutputPath| SETDEFAULT[Set Default: Text]
+    DETECT --> D[Event Collection]
+    SETDEFAULT --> D
+    
     D --> E[IP Pattern Filtering]
     E --> F[Event Processing & Decoding]
-    F --> G[Multi-Format Export]
+    F --> ARRAYFIX[Safe Array Handling<br>@$variable.Count]
+    ARRAYFIX --> G[Multi-Format Export]
+    
     G --> H[File Output]
     G --> I[Console Display]
     
@@ -430,15 +460,29 @@ graph TB
     
     Z --> AB[Interactive Charts]
     Z --> AC[Color-Coded Tables]
-    Z --> AD[Dark/Light Mode]
+    Z --> AD[Summary Statistics]
     
     AA --> AE[CREATE TABLE Script]
     AA --> AF[INSERT Statements]
+    AA --> AG[Metadata Comments]
     
+    ARRAYFIX --> GROUPFIX[Group-Object @wrapping]
+    GROUPFIX --> COUNTFIX[Safe .Count Access]
+    
+    style START fill:#e3f2fd
+    style PARAM fill:#fff3e0
+    style UPDATE fill:#e8f5e9
+    style VERSION fill:#e8f5e9
+    style HELP fill:#e8f5e9
     style A fill:#e1f5fe
     style R fill:#fff3e0
     style Z fill:#e8f5e8
     style AA fill:#f3e5f5
+    style ARRAYFIX fill:#ffebee
+    style GROUPFIX fill:#ffebee
+    style COUNTFIX fill:#ffebee
+    style ERROR1 fill:#ffcdd2
+    style ERROR2 fill:#ffcdd2
 ```
 
 ### 🔄 **Updated Architecture Flow**
