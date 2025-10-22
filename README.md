@@ -1,6 +1,6 @@
 # Get Windows Security Events By IP
 
-[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
+[![Version](https://img.shields.io/badge/version-5.0.2-blue.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PowerShell](https://img.shields.io/badge/powershell-5.1%2B-blue.svg)](https://docs.microsoft.com/en-us/powershell/)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%2FServer-blue.svg)](https://www.microsoft.com/windows/)
@@ -30,6 +30,7 @@
     - [PowerShell Setup](#powershell-setup)
     - [Quick Start Guide](#quick-start-guide)
     - [Verification Steps](#verification-steps)
+    - [Maintenance & Updates](#-maintenance--updates)
     - [Enterprise Deployment Considerations](#enterprise-deployment-considerations)
     - [Post-Installation Checklist](#post-installation-checklist)
   - [Usage Examples](#usage-examples)
@@ -87,11 +88,118 @@
 
 ## 🌟 Overview
 
-**Get-SecurityEventsByIP** is a lightweight, high-performance PowerShell cmdlet designed to query the Windows Security Event Log for events originating from a specified IP address. This module simplifies forensic investigations, network intrusion analysis, and compliance reporting by filtering for logon, logoff, failed login, and other security-related events based on remote IP addresses.
+**Get-SecurityEventsByIP** is an enterprise-grade PowerShell tool for Windows Security Event Log analysis, combining lightweight architecture with powerful features including IP filtering, CIDR support, multiple output formats, and **self-update capability**.
 
-Originally developed for abuse reporting and security incident response, this script has evolved into a multi-purpose security analysis platform that supports various use cases from basic event querying to sophisticated enterprise security operations.
+Originally developed for abuse reporting and security incident response, this script has evolved into a comprehensive security analysis platform supporting various use cases from basic event querying to sophisticated enterprise security operations.
+
+**New in v5.0.2:**
+- ✨ **Self-Update Mechanism** - Automatic updates from GitHub repository
+- 🔄 **Comprehensive Help System** - Built-in `-Help` parameter with detailed examples  
+- 📊 **Enhanced Reliability** - Fixed all array counting issues for consistent operation
+- 🎯 **Auto-Format Detection** - Automatically detects output format from file extension
+- ⚡ **Improved Error Handling** - Graceful handling of edge cases and single-group scenarios
+
 
 ***
+
+## Features in v5.0.2
+
+Version **5.0.2** introduces significant enhancements focused on usability and reliability:
+
+### 🔄 **Self-Maintenance & Updates**
+- **Automatic Updates**: Built-in `-Update` parameter fetches latest version from GitHub
+- **Version Checking**: `-Version` parameter displays current version and update information
+- **Backup Creation**: Automatic backup before updates for safe rollback
+- **Update Verification**: Integrity checks during download and installation
+
+### 📚 **Enhanced Documentation**
+- **Interactive Help**: `-Help` parameter displays comprehensive usage guide with examples
+- **Built-in Examples**: Pre-configured command examples for common scenarios
+- **Troubleshooting Tips**: Contextual error messages with actionable solutions
+- **Usage Patterns**: Real-world examples for incident response and compliance
+
+### 🛡️ **Reliability Improvements**
+- **Array Handling**: Fixed `Group-Object` count issues for single-item results
+- **Consistent Counting**: All `.Count` operations now use `@()` wrapper for reliability
+- **Error Recovery**: Graceful handling of edge cases and unexpected data patterns
+- **Performance**: Optimized event processing for large log files
+
+### 🎨 **User Experience**
+- **Auto-Format Detection**: Automatically determines output format from file extension
+```
+
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.html"  \# Auto-detects HTML
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.csv"   \# Auto-detects CSV
+
+```
+- **Smart Defaults**: Optimized default parameters for common use cases
+- **Console Output**: Optional `-ShowOutput` for real-time monitoring
+- **Screen-Only Mode**: Run without `-OutputPath` for quick console analysis
+
+### 🔧 **New Parameters**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `-Update` | Switch | Check for and install updates from GitHub | `.\Get-SecurityEventsByIP.ps1 -Update` |
+| `-Version` | Switch | Display version information | `.\Get-SecurityEventsByIP.ps1 -Version` |
+| `-Help` | Switch | Show comprehensive help with examples | `.\Get-SecurityEventsByIP.ps1 -Help` |
+
+### 📝 **Usage Examples**
+
+#### Self-Maintenance Commands
+```
+
+
+# Check current version
+
+.\Get-SecurityEventsByIP.ps1 -Version
+
+# Update to latest version
+
+.\Get-SecurityEventsByIP.ps1 -Update
+
+# Show help with examples
+
+.\Get-SecurityEventsByIP.ps1 -Help
+
+```
+
+#### Quick Analysis Examples
+```
+
+
+# Quick screen analysis (no file output)
+
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100"
+
+# Auto-detect format from extension
+
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "attack.html"
+
+# Collect all failed auth (no IP filter)
+
+.\Get-SecurityEventsByIP.ps1 -LastDays 7
+
+```
+
+### 🔍 **Bug Fixes**
+
+- **Fixed**: `Group-Object` count property error when single group returned
+- **Fixed**: Array consistency issues across all statistical functions
+- **Fixed**: Output format detection from file path
+- **Fixed**: Error handling for empty event log scenarios
+- **Improved**: Status code decoding for edge cases
+- **Enhanced**: CIDR range processing reliability
+
+### ⚡ **Performance Enhancements**
+
+- **Optimized**: Array handling using `@()` wrapper throughout codebase
+- **Improved**: Memory management during large log processing
+- **Enhanced**: Event processing pipeline efficiency
+- **Streamlined**: Export functions for faster file generation
+
+This version represents a mature, production-ready security event analysis solution suitable for incident response, compliance reporting, and security monitoring workflows with enterprise-grade reliability.
+
 
 ## Features in v4.2
 
@@ -625,41 +733,46 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 ```
 
-### **Quick Start Guide**
+### 🚀 Quick Start Guide
 
-#### 🚀 **First Run Examples**
-```powershell
-## Basic usage - analyze RDP events for specific IP
-.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -Category RDP -ShowOutput
+#### First Time Setup
+```
+# Download the script
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP.ps1"
 
-## Collect all failed authentication attempts (no IP filter)
-.\Get-SecurityEventsByIP.ps1 -LastDays 7 -OutputFormat HTML -ShowOutput
+# Check version
+.\Get-SecurityEventsByIP.ps1 -Version
 
-## Export to MySQL for database analysis
-.\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.0/24" -Category AllEvents -OutputFormat MySQL -OutputPath "C:\Reports\security_events.sql"
+# View help
+.\Get-SecurityEventsByIP.ps1 -Help
 ```
 
-#### 📁 **Output Directory Setup**
-```powershell
-## Create dedicated output directory
-New-Item -ItemType Directory -Path "C:\SecurityReports" -Force
+#### Basic Usage Examples
+```
+# Quick console analysis - no file output
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100"
 
-## Run with custom output path
-.\Get-SecurityEventsByIP.ps1 -IpAddress "89.108.109.173" -OutputPath "C:\SecurityReports\rdp_attempts.html" -OutputFormat HTML
+# Save to HTML report (auto-detected format)
+.\Get-SecurityEventsByIP.ps1 -IpAddress "192.168.1.100" -OutputPath "report.html"
+
+# All failed authentication attempts (last 24 hours)
+.\Get-SecurityEventsByIP.ps1 -LastHours 24
+
+# CIDR range analysis
+.\Get-SecurityEventsByIP.ps1 -IpAddress "10.0.0.0/24" -OutputPath "network_scan.csv"
+
 ```
 
-### **Verification Steps**
+#### Maintenance Commands
+```
+# Update to latest version
+.\Get-SecurityEventsByIP.ps1 -Update
 
-#### ✅ **Basic Functionality Test**
-```powershell
-## Test with localhost IP (should find events if any exist)
-.\Get-SecurityEventsByIP.ps1 -IpAddress "127.0.0.1" -Category Authentication -ShowOutput
+# Check current version
+.\Get-SecurityEventsByIP.ps1 -Version
 
-## Test with short time range
-.\Get-SecurityEventsByIP.ps1 -LastHours 1 -OutputFormat Text -OutputPath "test_output.txt"
-
-## Verify file creation
-Get-ChildItem "test_output.txt"
+# Show comprehensive help
+.\Get-SecurityEventsByIP.ps1 -Help
 ```
 
 #### 🔍 **Troubleshooting Common Issues**
@@ -672,6 +785,116 @@ Get-WinEvent -ListLog "Security" -ErrorAction SilentlyContinue
 
 ## Test basic event query
 Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625} -MaxEvents 1 -ErrorAction SilentlyContinue
+```
+
+## 🔄 Maintenance & Updates
+
+### Self-Update Feature
+
+Version 5.0.2 introduces automatic update capability directly from the GitHub repository.
+
+#### Checking for Updates
+```
+# Display current version
+.\Get-SecurityEventsByIP.ps1 -Version
+
+# Output:
+# Version: 5.0.2
+# Author: Mikhail Deynekin
+# Email: mid1977@gmail.com
+# Website: https://deynekin.com
+
+```
+
+#### Updating the Script
+```
+# Update to latest version
+.\Get-SecurityEventsByIP.ps1 -Update
+
+# The script will:
+# 1. Download latest version from GitHub
+# 2. Create backup of current version
+# 3. Replace with new version
+# 4. Verify successful update
+
+```
+
+#### Update Process
+```
+
+╔══════════════════════════════════════════════════════════════╗
+║           Script Update Check                               ║
+╚══════════════════════════════════════════════════════════════╝
+
+Current version: 5.0.2
+Checking for updates from GitHub...
+
+Downloading from: https://raw.githubusercontent.com/...
+✅ Backup created: Get-SecurityEventsByIP.ps1.backup_20251022_010530
+✅ Script updated successfully!
+
+The script has been updated to the latest version.
+Backup of previous version saved to: Get-SecurityEventsByIP.ps1.backup_20251022_010530
+
+Please run the script again to use the new version.
+
+```
+
+#### Rollback to Previous Version
+```
+
+# If needed, restore from backup
+
+\$backupFile = Get-ChildItem "Get-SecurityEventsByIP.ps1.backup_*" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+Copy-Item -Path \$backupFile.FullName -Destination "Get-SecurityEventsByIP.ps1" -Force
+
+Write-Host "Restored from backup: $($backupFile.Name)"
+
+```
+
+#### Update Automation
+```
+
+# Schedule weekly update check
+
+\$Action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument '-File "C:\Scripts\Get-SecurityEventsByIP.ps1" -Update'
+\$Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At "03:00"
+Register-ScheduledTask -TaskName "Update Security Script" -Action \$Action -Trigger \$Trigger -RunLevel Highest
+
+```
+
+### Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 5.0.2 | 2025-10-22 | Fixed all `.Count` properties with `@()` wrapper for reliability |
+| 5.0.1 | 2025-10-22 | Fixed `Group-Object` count issue, improved array handling |
+| 5.0.0 | 2025-10-21 | Added `-Update`, `-Help`, `-Version` parameters |
+| 4.2.0 | 2024-XX-XX | Multiple output formats, CIDR support |
+
+### Troubleshooting Updates
+
+#### Update Failed - No Internet Connection
+```
+# Manual download option
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/paulmann/Get-Windows-Security-Events-By-IP/main/Get-SecurityEventsByIP.ps1" -OutFile "Get-SecurityEventsByIP-latest.ps1"
+
+```
+
+#### Update Failed - GitHub Unavailable
+```
+# Alternative: Clone repository
+git clone https://github.com/paulmann/Get-Windows-Security-Events-By-IP.git
+Copy-Item ".\Get-Windows-Security-Events-By-IP\Get-SecurityEventsByIP.ps1" -Destination ".\Get-SecurityEventsByIP.ps1" -Force
+
+```
+
+#### Verify Script Integrity
+```
+# Check file hash after update
+Get-FileHash "Get-SecurityEventsByIP.ps1" -Algorithm SHA256
+# Compare with published hash (check repository)
+
 ```
 
 ### **Enterprise Deployment Considerations**
