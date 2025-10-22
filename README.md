@@ -3171,6 +3171,6 @@ For enterprise organizations requiring commercial support, SLAs, or custom licen
 
 **⭐ Star this repository if you find it valuable for your organization!**
 
-*Last updated: 21 October 2025 | Version: 4.1.0 | Enterprise Ready*
+*Last updated: 21 October 2025 | Version: 5.0.2 | Enterprise Ready*
 
 </div>
