@@ -7,7 +7,7 @@
     Features comprehensive error handling, logging, session validation, rollback support,
     individual icon settings reset, Group Policy management, and advanced diagnostic capabilities.
     
-    NEW IN VERSION 5.8:
+    NEW IN VERSION 5.9:
     - Administrator rights validation and elevation support
     - Group Policy configuration for all users
     - Enhanced enterprise deployment features
@@ -18,7 +18,6 @@
     Author: Mikhail Deynekin (mid1977@gmail.com)
     Website: https://deynekin.com
     Repository: https://github.com/paulmann/windows-show-all-tray-icons
-    Version: 5.8 (Enterprise Edition - Group Policy Enhanced)
 
 .PARAMETER Action
     Specifies the action to perform:
@@ -91,7 +90,7 @@
     Runs backup file diagnostics and validation checks.
 
 .NOTES
-    Version:        5.8 (Enterprise Edition - Group Policy Enhanced)
+    Version:        5.9 (Enterprise Edition - Group Policy Enhanced)
     Creation Date:  2025-11-21
     Last Updated:   2025-11-23
     Compatibility:  Windows 10 (All versions), Windows 11 (All versions), Server 2019+
@@ -122,39 +121,46 @@ param (
     [Parameter(Mandatory = $false, Position = 0)]
     [ValidateSet('Enable', 'Disable', 'Status', 'Rollback', 'Backup', IgnoreCase = $true)]
     [string]$Action,
-
     [Parameter(Mandatory = $false)]
     [switch]$AllUsers,
-
     [Parameter(Mandatory = $false)]
     [switch]$RestartExplorer,
-
     [Parameter(Mandatory = $false)]
     [switch]$BackupRegistry,
-
     [Parameter(Mandatory = $false)]
     [string]$LogPath,
-
     [Parameter(Mandatory = $false)]
-    [switch]$Force,
-
+    [switch]$Force,  # Added for overwriting backups
     [Parameter(Mandatory = $false)]
     [switch]$Update,
-
-[Parameter(Mandatory = $false)]
-[switch]$Help,
-
-[Parameter(Mandatory = $false)]
-[ValidateSet('Full', 'Quick', 'Admin', 'Security', IgnoreCase = $true)]
-[string]$HelpLevel = 'Quick',
-
+    [Parameter(Mandatory = $false)]
+    [switch]$Help,
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('Full', 'Quick', 'Admin', 'Security', IgnoreCase = $true)]
+    [string]$HelpLevel = 'Quick',
     [Parameter(Mandatory = $false)]
     [switch]$Diagnostic,
-
     # Hidden parameter for internal help functions
     [Parameter(Mandatory = $false, DontShow = $true)]
-    [switch]$QuickHelp
-
+    [switch]$QuickHelp,
+    # Backup-specific parameters
+    [Parameter(Mandatory = $false, HelpMessage = "Overwrite existing backup file without confirmation")]
+    [switch]$ForceBackup,
+    
+    [Parameter(Mandatory = $false, HelpMessage = "Specify custom backup file path")]
+    [ValidateScript({
+        if ($_ -and !(Test-Path (Split-Path $_ -Parent) -PathType Container)) {
+            throw "The directory '$(Split-Path $_ -Parent)' does not exist."
+        }
+        $true
+    })]
+    [string]$CustomPath,
+    
+    [Parameter(Mandatory = $false, HelpMessage = "Exclude icon cache data to reduce backup size")]
+    [switch]$ExcludeCache,
+    
+    [Parameter(Mandatory = $false, HelpMessage = "Compress backup file to reduce storage footprint")]
+    [switch]$CompressBackup
 )
 
 # ============================================================================
@@ -174,7 +180,7 @@ $Script:Configuration = @{
     GroupPolicyValue = "EnableAutoTray"
     
     # Script Metadata
-    ScriptVersion = "5.8"
+    ScriptVersion = "5.9"
     ScriptAuthor = "Mikhail Deynekin (mid1977@gmail.com)"
     ScriptName = "Enable-AllTrayIcons.ps1"
     GitHubRepository = "https://github.com/paulmann/windows-show-all-tray-icons"
@@ -340,9 +346,13 @@ function Write-EnhancedOutput {
         
         [Parameter(Mandatory = $false)]
         [switch]$NoNewline,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Force,
         
         [Parameter(Mandatory = $false)]
         [switch]$Bold
+
     )
     
     $color = $Script:ConsoleColors[$Type]
@@ -572,6 +582,12 @@ function Show-ModernHelp {
     Write-ModernCard "-Update" "Check and update script from GitHub repository"
     Write-ModernCard "-Diagnostic" "Run backup file diagnostics and validation"
     Write-ModernCard "-HelpLevel <type>" "Specify help type: Full, Quick, Admin, or Security" -ValueColor Info
+    Write-Host ""
+    Write-EnhancedOutput "BACKUP OPTIONS:" -Type Primary
+    Write-ModernCard "-ForceBackup" "Overwrite existing backup files without confirmation"
+    Write-ModernCard "-CustomPath <path>" "Specify custom backup location (e.g., 'C:\Backups\TrayIcons-$(Get-Date -Format 'yyyyMMdd').json')"
+    Write-ModernCard "-ExcludeCache" "Exclude icon cache data to reduce backup file size (not recommended for complete restoration)"
+    Write-ModernCard "-CompressBackup" "Compress backup file to minimize storage requirements"
     Write-Host ""
     Write-EnhancedOutput "HELP LEVELS:" -Type Primary
     Write-ModernCard "Full" "Complete documentation with all parameters, examples and enterprise deployment details" -ValueColor Light
@@ -899,7 +915,7 @@ function Enable-AllTrayIconsComprehensive {
     Write-ModernCard "AllUsers" $(if ($AllUsers) { "Enabled (Group Policy mode)" } else { "Disabled (Current user only)" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
     Write-ModernCard "RestartExplorer" $(if ($RestartExplorer) { "Yes" } else { "No" })
     Write-ModernCard "BackupRegistry" $(if ($BackupRegistry) { "Yes" } else { "No" })
-    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled (Confirmation required)" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
     Write-ModernCard "Admin Rights" $(if (Test-AdministratorRights) { "Available" } else { "Not available" }) -ValueColor $(if (Test-AdministratorRights) { "Success" } else { "Error" })
     Write-Host ""
     
@@ -1433,7 +1449,7 @@ function Enable-AllTrayIconsComprehensive {
     Write-ModernCard "AllUsers" $(if ($AllUsers) { "Enabled (Group Policy mode)" } else { "Disabled (Current user only)" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
     Write-ModernCard "RestartExplorer" $(if ($RestartExplorer) { "Yes" } else { "No" })
     Write-ModernCard "BackupRegistry" $(if ($BackupRegistry) { "Yes" } else { "No" })
-    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled (Confirmation required)" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
     Write-ModernCard "Admin Rights" $(if (Test-AdministratorRights) { "Available" } else { "Not available" }) -ValueColor $(if (Test-AdministratorRights) { "Success" } else { "Error" })
     Write-Host ""
     
@@ -1659,37 +1675,137 @@ function Get-WindowsVersion {
 function Backup-ComprehensiveTraySettings {
     <#
     .SYNOPSIS
-        Creates comprehensive backup of ALL tray-related settings.
+        Creates comprehensive backup of ALL tray-related settings with validation and detailed reporting.
+    .DESCRIPTION
+        Creates an enterprise-grade backup of all system tray icon settings including registry values,
+        individual application preferences, notification area cache, system icons, and Group Policy settings.
+        Features backup validation, progress reporting, and detailed metadata capture.
+    .PARAMETER Force
+        Force overwrite of existing backup file without confirmation.
+    .PARAMETER CustomPath
+        Specifies a custom path for the backup file instead of the default location.
+    .PARAMETER ExcludeCache
+        Excludes icon cache data to reduce backup size (not recommended for complete restoration).
+    .PARAMETER CompressBackup
+        Compresses the backup file to reduce storage footprint.
+    .EXAMPLE
+        Backup-ComprehensiveTraySettings -Force
+        Creates comprehensive backup and overwrites existing file without confirmation.
+    .EXAMPLE
+        Backup-ComprehensiveTraySettings -CustomPath "C:\EnterpriseBackups\TraySettings-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
+        Creates timestamped backup in custom enterprise location.
+    .EXAMPLE
+        Backup-ComprehensiveTraySettings -CompressBackup
+        Creates compressed backup file to minimize storage requirements.
     #>
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$Overwrite,
+        [Parameter(Mandatory = $false)]
+        [string]$CustomPath,
+        [Parameter(Mandatory = $false)]
+        [switch]$ExcludeCache = $false,
+        [Parameter(Mandatory = $false)]
+        [switch]$CompressBackup = $false
+    )
+    
+    # Determine backup path
+    $defaultBackupPath = if ($AllUsers) { 
+        $Script:Configuration.AllUsersBackupPath 
+    } else { 
+        $Script:Configuration.BackupRegistryPath 
+    }
+    
+    $backupPath = if ($CustomPath) { 
+        $CustomPath 
+    } else { 
+        $defaultBackupPath 
+    }
+
+    if ($CompressBackup) {
+        try {
+            [System.IO.Compression.GZipStream] | Out-Null
+        }
+        catch {
+            Write-ModernStatus "Compression requires .NET Framework 4.5 or higher" -Status Warning
+            Write-ModernStatus "Creating uncompressed backup instead" -Status Warning
+            $CompressBackup = $false
+        }
+    }
+    
+    # Check if backup already exists
+    if (Test-Path $backupPath) {
+        $existingBackup = Get-Item $backupPath
+        $existingSize = [math]::Round($existingBackup.Length / 1KB, 2)
+        $lastModified = $existingBackup.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+        
+        if (-not $Overwrite -and -not $script:Force -and -not $script:ForceBackup) {
+            Write-ModernStatus "BACKUP ALREADY EXISTS - SKIPPING CREATION" -Status Warning
+            Write-ModernCard "Location" $backupPath -ValueColor Warning
+            Write-ModernCard "Size" "$existingSize KB" -ValueColor Info
+            Write-ModernCard "Last Modified" $lastModified -ValueColor Info
+            Write-ModernStatus "Use -ForceBackup or -Force parameter to overwrite existing backup" -Status Info
+            return $false  # Просто пропускаем создание бэкапа
+        } else {
+            Write-ModernStatus "OVERWRITING EXISTING BACKUP FILE" -Status Warning
+            Write-ModernCard "Previous Backup Size" "$existingSize KB" -ValueColor Warning
+            Write-ModernCard "Last Modified" $lastModified -ValueColor Warning
+        }
+    }
     
     Write-ModernStatus "Creating comprehensive tray settings backup..." -Status Processing
+    Write-ModernCard "Backup Type" "Comprehensive Settings Backup" -ValueColor Info
+    Write-ModernCard "Backup Scope" $(if ($AllUsers) { "All Users (Group Policy)" } else { "Current User Only" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
+    Write-ModernCard "Include Cache Data" $(if (-not $ExcludeCache) { "Yes" } else { "No (Reduced Size)" }) -ValueColor $(if (-not $ExcludeCache) { "Success" } else { "Warning" })
     
-    $backupData = @{
-        Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $backupData = [ordered]@{
+        BackupType = "Comprehensive Tray Settings"
+        Timestamp = $timestamp
         ScriptVersion = $Script:Configuration.ScriptVersion
         ComputerName = $env:COMPUTERNAME
         UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
         WindowsVersion = Get-WindowsVersion
+        PowerShellVersion = $PSVersionTable.PSVersion.ToString()
         AllUsers = $AllUsers
+        ExcludeCache = $ExcludeCache
+        RegistryPaths = @()
+        SettingsCaptured = @()
     }
     
+    $progress = 0
+    $totalSteps = 6
+    
     try {
-        # 1. Backup main AutoTray setting
+        # Step 1: Backup main AutoTray setting
+        $progress++
+        Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up registry configuration" -PercentComplete ($progress / $totalSteps * 100)
         $backupData.EnableAutoTray = Get-CurrentTrayConfiguration
+        $backupData.RegistryPaths += $Script:Configuration.RegistryPath
+        $backupData.SettingsCaptured += "Main AutoTray Configuration"
         
-        # 2. Backup Group Policy settings if AllUsers
+        # Step 2: Backup Group Policy settings if AllUsers
         if ($AllUsers) {
+            $progress++
+            Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up Group Policy settings" -PercentComplete ($progress / $totalSteps * 100)
             $gpoConfig = Get-GroupPolicyConfiguration
             $backupData.GroupPolicy = $gpoConfig
+            $backupData.RegistryPaths += $Script:Configuration.GroupPolicyUserPath, $Script:Configuration.GroupPolicyMachinePath
+            $backupData.SettingsCaptured += "Group Policy Configuration"
         }
         
-        # 3. Backup NotifyIconSettings
+        # Step 3: Backup NotifyIconSettings
+        $progress++
+        Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up individual icon settings" -PercentComplete ($progress / $totalSteps * 100)
         $settingsPath = "HKCU:\Control Panel\NotifyIconSettings"
         if (Test-Path $settingsPath) {
             $notifySettings = @{}
-            Get-ChildItem -Path $settingsPath | ForEach-Object {
+            $iconCount = 0
+            Get-ChildItem -Path $settingsPath -ErrorAction SilentlyContinue | ForEach-Object {
                 $iconSettings = Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue
                 if ($iconSettings) {
+                    $iconCount++
                     $notifySettings[$_.PSChildName] = @{}
                     foreach ($property in $iconSettings.PSObject.Properties) {
                         if ($property.Name -notin @("PSPath", "PSParentPath", "PSChildName", "PSDrive", "PSProvider")) {
@@ -1698,78 +1814,212 @@ function Backup-ComprehensiveTraySettings {
                     }
                 }
             }
-            $backupData.NotifyIconSettings = $notifySettings
+            if ($iconCount -gt 0) {
+                $backupData.NotifyIconSettings = $notifySettings
+                $backupData.SettingsCaptured += "Individual Icon Settings ($iconCount icons)"
+            }
         }
         
-        # 4. Backup TrayNotify
-        $trayPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\TrayNotify"
-        if (Test-Path $trayPath) {
-            $traySettings = @{}
-            $trayProperties = Get-ItemProperty -Path $trayPath -ErrorAction SilentlyContinue
-            if ($trayProperties) {
-                foreach ($property in $trayProperties.PSObject.Properties) {
-                    if ($property.Name -notin @("PSPath", "PSParentPath", "PSChildName", "PSDrive", "PSProvider")) {
-                        # For binary data, store as Base64
-                        if ($property.Value -is [byte[]]) {
-                            $traySettings[$property.Name] = @{
-                                Type = "Binary"
-                                Data = [Convert]::ToBase64String($property.Value)
-                                Length = $property.Value.Length
+        # Step 4: Backup TrayNotify (skip if ExcludeCache specified)
+        if (-not $ExcludeCache) {
+            $progress++
+            Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up system tray cache" -PercentComplete ($progress / $totalSteps * 100)
+            $trayPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\TrayNotify"
+            if (Test-Path $trayPath) {
+                $traySettings = @{}
+                $trayProperties = Get-ItemProperty -Path $trayPath -ErrorAction SilentlyContinue
+                if ($trayProperties) {
+                    $hasData = $false
+                    foreach ($property in $trayProperties.PSObject.Properties) {
+                        if ($property.Name -notin @("PSPath", "PSParentPath", "PSChildName", "PSDrive", "PSProvider")) {
+                            $hasData = $true
+                            # For binary data, store as Base64 with metadata
+                            if ($property.Value -is [byte[]]) {
+                                $traySettings[$property.Name] = @{
+                                    Type = "Binary"
+                                    Length = $property.Value.Length
+                                    Hash = (Get-FileHash -InputStream ([System.IO.MemoryStream]::new($property.Value)) -Algorithm SHA256).Hash
+                                    Data = [Convert]::ToBase64String($property.Value)
+                                }
+                            }
+                            else {
+                                $traySettings[$property.Name] = $property.Value
                             }
                         }
-                        else {
-                            $traySettings[$property.Name] = $property.Value
-                        }
+                    }
+                    if ($hasData) {
+                        $backupData.TrayNotify = $traySettings
+                        $backupData.SettingsCaptured += "System Tray Cache"
                     }
                 }
             }
-            $backupData.TrayNotify = $traySettings
         }
         
-        # 5. Backup system icon settings
+        # Step 5: Backup system icon settings
+        $progress++
+        Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up system icon visibility" -PercentComplete ($progress / $totalSteps * 100)
         $systemIconsPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
-        $systemIcons = @("HideSCAVolume", "HideSCANetwork", "HideSCAPower")
-        $backupData.SystemIcons = @{}
+        $systemIcons = @("HideSCAVolume", "HideSCANetwork", "HideSCAPower", "HideSCAClock")
+        $systemIconsBackup = @{}
+        $iconsFound = 0
         
         foreach ($icon in $systemIcons) {
             try {
                 $value = Get-ItemProperty -Path $systemIconsPath -Name $icon -ErrorAction SilentlyContinue
-                if ($value) {
-                    $backupData.SystemIcons[$icon] = $value.$icon
+                if ($null -ne $value -and $null -ne $value.$icon) {
+                    $systemIconsBackup[$icon] = $value.$icon
+                    $iconsFound++
                 }
             }
             catch {
-                # Skip if not present
+                # Skip if not present or inaccessible
             }
         }
         
-        # Determine backup path based on scope
-        $backupPath = if ($AllUsers) { 
-            $Script:Configuration.AllUsersBackupPath 
-        } else { 
-            $Script:Configuration.BackupRegistryPath 
+        if ($iconsFound -gt 0) {
+            $backupData.SystemIcons = $systemIconsBackup
+            $backupData.SettingsCaptured += "System Icons Visibility ($iconsFound icons)"
         }
         
-        # Convert to JSON with proper formatting
-        $json = $backupData | ConvertTo-Json -Depth 10 -Compress
+        # Step 6: Backup Windows 11 specific settings
+        $progress++
+        Write-Progress -Activity "Creating Comprehensive Backup" -Status "Backing up Windows version-specific settings" -PercentComplete ($progress / $totalSteps * 100)
+        $windowsVersion = Get-WindowsVersion
+        $backupData.WindowsVersionDetails = $windowsVersion
         
-        # Save with UTF-8 encoding without BOM
+        if ($windowsVersion -like "*11*") {
+            $win11Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+            if (Test-Path $win11Path) {
+                $win11Settings = Get-ItemProperty -Path $win11Path -Name "TaskbarMn", "TaskbarDa", "TaskbarSi" -ErrorAction SilentlyContinue
+                if ($win11Settings) {
+                    $backupData.Windows11Settings = @{}
+                    foreach ($property in $win11Settings.PSObject.Properties) {
+                        if ($property.Name -notin @("PSPath", "PSParentPath", "PSChildName", "PSDrive", "PSProvider") -and $null -ne $property.Value) {
+                            $backupData.Windows11Settings[$property.Name] = $property.Value
+                        }
+                    }
+                    if ($backupData.Windows11Settings.Count -gt 0) {
+                        $backupData.SettingsCaptured += "Windows 11 Taskbar Settings"
+                    }
+                }
+            }
+        }
+        
+        # Ensure backup directory exists
+        $backupDir = Split-Path -Path $backupPath -Parent
+        if (-not (Test-Path $backupDir)) {
+            Write-ModernStatus "Creating backup directory: $backupDir" -Status Info
+            $null = New-Item -Path $backupDir -ItemType Directory -Force -ErrorAction Stop
+        }
+        
+        # Create backup file
+        $jsonParams = @{
+            Depth = 15
+            Compress = $CompressBackup
+        }
+        
+        $jsonContent = $backupData | ConvertTo-Json @jsonParams
         $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-        [System.IO.File]::WriteAllText($backupPath, $json, $utf8NoBom)
+        [System.IO.File]::WriteAllText($backupPath, $jsonContent, $utf8NoBom)
         
-        Write-ModernStatus "Comprehensive backup created: $backupPath" -Status Success
+        # Verify backup integrity
+        try {
+            $verificationData = Get-Content -Path $backupPath -Raw | ConvertFrom-Json
+            if ($verificationData.Timestamp -ne $timestamp) {
+                throw "Timestamp verification failed"
+            }
+            if ($verificationData.SettingsCaptured.Count -eq 0) {
+                throw "No settings were captured in the backup"
+            }
+            Write-ModernStatus "Backup verification successful" -Status Success
+        }
+        catch {
+            Write-ModernStatus "Backup verification failed: $($_.Exception.Message)" -Status Error
+            Write-ModernStatus "Backup file may be corrupted or incomplete" -Status Error
+            return $false
+        }
         
-        # Display backup summary
+        # Get final backup details
+        $backupFile = Get-Item $backupPath
+        $backupSize = [math]::Round($backupFile.Length / 1KB, 2)
+        $originalSize = $backupSize
+        
+        # Apply compression if requested
+        if ($CompressBackup -and $backupSize -gt 10) {
+            try {
+                $compressedPath = "$backupPath.gz"
+                $compressionStream = New-Object System.IO.FileStream($compressedPath, [System.IO.FileMode]::Create)
+                $gzipStream = New-Object System.IO.Compression.GZipStream($compressionStream, [System.IO.Compression.CompressionLevel]::Optimal)
+                $writer = New-Object System.IO.StreamWriter($gzipStream)
+                $writer.Write($jsonContent)
+                $writer.Close()
+                $gzipStream.Close()
+                $compressionStream.Close()
+                
+                # Remove original file and rename compressed file
+                Remove-Item -Path $backupPath -Force -ErrorAction Stop
+                Rename-Item -Path $compressedPath -NewName (Split-Path $backupPath -Leaf) -Force -ErrorAction Stop
+                
+                $compressedFile = Get-Item $backupPath
+                $compressedSize = [math]::Round($compressedFile.Length / 1KB, 2)
+                $compressionRatio = [math]::Round(($originalSize - $compressedSize) / $originalSize * 100, 1)
+                
+                $backupSize = $compressedSize
+                Write-ModernStatus "Backup compression completed" -Status Success
+                Write-ModernCard "Original Size" "$originalSize KB" -ValueColor Info
+                Write-ModernCard "Compressed Size" "$compressedSize KB" -ValueColor Success
+                Write-ModernCard "Space Saved" "$compressionRatio%" -ValueColor Success
+            }
+            catch {
+                Write-ModernStatus "Backup compression failed: $($_.Exception.Message)" -Status Warning
+                Write-ModernStatus "Using uncompressed backup file" -Status Warning
+            }
+        }
+        
+        # Display completion summary
+        Write-Progress -Activity "Creating Comprehensive Backup" -Completed
+        Write-ModernStatus "Comprehensive backup created successfully!" -Status Success
         Write-ModernCard "Backup Location" $backupPath
-        Write-ModernCard "Backup Scope" $(if ($AllUsers) { "All Users" } else { "Current User" })
-        Write-ModernCard "Settings Backed Up" "$($backupData.Keys.Count) categories"
-        Write-ModernCard "Windows Version" $backupData.WindowsVersion
-        Write-ModernCard "Backup Size" "$([math]::Round((Get-Item $backupPath).Length/1KB, 2)) KB"
+        Write-ModernCard "Backup Size" "$backupSize KB"
+        Write-ModernCard "Backup Time" $timestamp
+        Write-ModernCard "Windows Version" $windowsVersion
+        Write-ModernCard "Settings Categories" $backupData.SettingsCaptured.Count
+        Write-ModernCard "Registry Paths" $backupData.RegistryPaths.Count
+        
+        # Detailed settings summary
+        Write-Host ""
+        Write-EnhancedOutput "SETTINGS CAPTURED:" -Type Primary
+        foreach ($setting in $backupData.SettingsCaptured) {
+            Write-ModernCard "✓" $setting -ValueColor Success
+        }
+        
+        # Security note for all users backup
+        if ($AllUsers) {
+            Write-Host ""
+            Write-ModernStatus "SECURITY NOTE: This backup contains sensitive system configuration data." -Status Warning
+            Write-ModernStatus "Store this file securely and restrict access permissions." -Status Warning
+            Write-ModernStatus "For enterprise deployment, consider encrypting this backup file." -Status Info
+        }
         
         return $true
     }
     catch {
+        Write-Progress -Activity "Creating Comprehensive Backup" -Completed
         Write-ModernStatus "Comprehensive backup failed: $($_.Exception.Message)" -Status Error
+        Write-ModernStatus "Exception Type: $($_.Exception.GetType().FullName)" -Status Warning
+        Write-ModernStatus "Target Path: $backupPath" -Status Warning
+        
+        # Attempt cleanup of partial backup
+        if (Test-Path $backupPath) {
+            try {
+                Remove-Item -Path $backupPath -Force -ErrorAction SilentlyContinue
+                Write-ModernStatus "Partial backup file removed" -Status Info
+            }
+            catch {
+                Write-ModernStatus "Failed to remove partial backup file" -Status Warning
+            }
+        }
+        
         return $false
     }
 }
@@ -1914,62 +2164,155 @@ function Restore-ComprehensiveTraySettings {
 function Backup-RegistryConfiguration {
     <#
     .SYNOPSIS
-        Creates registry backup for rollback capability.
+        Creates registry backup with overwrite protection and comprehensive validation.
+    .DESCRIPTION
+        Creates a backup of critical registry settings for rollback capability with advanced overwrite protection,
+        validation, and detailed reporting. Supports both current user and all users backup modes.
+    .PARAMETER Force
+        Force overwrite of existing backup file without confirmation.
+    .PARAMETER CustomPath
+        Specifies a custom path for the backup file instead of the default location.
+    .PARAMETER VerifyBackup
+        Verifies backup file integrity after creation (enabled by default).
+    .EXAMPLE
+        Backup-RegistryConfiguration -Force
+        Creates backup and overwrites existing backup file without confirmation.
+    .EXAMPLE
+        Backup-RegistryConfiguration -CustomPath "C:\Backups\TrayIcons-$(Get-Date -Format 'yyyyMMdd').json"
+        Creates backup with custom filename including date stamp.
     #>
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $false)]
-        [switch]$Force
+        [switch]$Overwrite,  # Renamed from Force to avoid conflict
+        
+        [Parameter(Mandatory = $false)]
+        [string]$CustomPath,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$VerifyBackup = $true
     )
     
     try {
-        $backupPath = if ($AllUsers) { 
+        # Determine backup path
+        $defaultBackupPath = if ($AllUsers) { 
             $Script:Configuration.AllUsersBackupPath 
         } else { 
             $Script:Configuration.BackupRegistryPath 
         }
         
+        $backupPath = if ($CustomPath) { 
+            $CustomPath 
+        } else { 
+            $defaultBackupPath 
+        }
+        
         # Check if backup already exists
         if (Test-Path $backupPath) {
+            $existingBackup = Get-Item $backupPath
+            $existingSize = [math]::Round($existingBackup.Length / 1KB, 2)
+            $lastModified = $existingBackup.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+            
             if (-not $Force) {
-                Write-ModernStatus "Backup already exists: $backupPath" -Status Warning
-                Write-ModernStatus "Use -Force to overwrite existing backup" -Status Info
+                Write-ModernStatus "BACKUP ALREADY EXISTS" -Status Warning
+                Write-ModernCard "Location" $backupPath -ValueColor Warning
+                Write-ModernCard "Size" "$existingSize KB" -ValueColor Info
+                Write-ModernCard "Last Modified" $lastModified -ValueColor Info
+                Write-ModernStatus "USE -Force PARAMETER TO OVERWRITE EXISTING BACKUP" -Status Warning
+                Write-ModernStatus "Example: Backup-RegistryConfiguration -Force" -Status Info
                 return $false
             } else {
-                Write-ModernStatus "Overwriting existing backup..." -Status Warning
+                Write-ModernStatus "OVERWRITING EXISTING BACKUP FILE" -Status Warning
+                Write-ModernCard "Previous Backup Size" "$existingSize KB" -ValueColor Warning
+                Write-ModernCard "Last Modified" $lastModified -ValueColor Warning
             }
         }
         
+        # Get current configuration
         $currentConfig = Get-CurrentTrayConfiguration
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         
-        $backupData = @{
-            Timestamp = Get-Date
-            OriginalValue = $currentConfig
-            RegistryPath = $Script:Configuration.RegistryPath
-            ValueName = $Script:Configuration.RegistryValue
+        Write-ModernStatus "Creating registry backup..." -Status Processing
+        Write-ModernCard "Target Path" $backupPath -ValueColor Info
+        Write-ModernCard "Backup Scope" $(if ($AllUsers) { "All Users (Group Policy)" } else { "Current User Only" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
+        
+        # Prepare backup data
+        $backupData = [ordered]@{
+            BackupType = "Registry Configuration"
+            Timestamp = $timestamp
             ScriptVersion = $Script:Configuration.ScriptVersion
             ComputerName = $env:COMPUTERNAME
             UserName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            WindowsVersion = Get-WindowsVersion
+            PowerShellVersion = $PSVersionTable.PSVersion.ToString()
             AllUsers = $AllUsers
+            OriginalValue = $currentConfig
+            RegistryPath = $Script:Configuration.RegistryPath
+            ValueName = $Script:Configuration.RegistryValue
         }
         
         # Include Group Policy settings if AllUsers
         if ($AllUsers) {
-            $backupData.GroupPolicy = Get-GroupPolicyConfiguration
+            $gpoConfig = Get-GroupPolicyConfiguration
+            $backupData.GroupPolicy = @{
+                UserPolicy = $gpoConfig.UserPolicy
+                MachinePolicy = $gpoConfig.MachinePolicy
+                EffectivePolicy = $gpoConfig.EffectivePolicy
+            }
         }
         
-        $backupData | ConvertTo-Json | Out-File -FilePath $backupPath -Encoding UTF8
-        Write-ModernStatus "Registry configuration backed up to: $backupPath" -Status Success
+        # Ensure backup directory exists
+        $backupDir = Split-Path -Path $backupPath -Parent
+        if (-not (Test-Path $backupDir)) {
+            Write-ModernStatus "Creating backup directory: $backupDir" -Status Info
+            $null = New-Item -Path $backupDir -ItemType Directory -Force -ErrorAction Stop
+        }
         
-        # Display backup information
+        # Create backup file with proper encoding
+        $jsonContent = $backupData | ConvertTo-Json -Depth 10
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($backupPath, $jsonContent, $utf8NoBom)
+        
+        # Verify backup if requested
+        if ($VerifyBackup) {
+            try {
+                $verificationData = Get-Content -Path $backupPath -Raw | ConvertFrom-Json
+                if ($verificationData.Timestamp -ne $timestamp) {
+                    throw "Timestamp verification failed"
+                }
+                Write-ModernStatus "Backup verification successful" -Status Success
+            }
+            catch {
+                Write-ModernStatus "Backup verification failed: $($_.Exception.Message)" -Status Error
+                Write-ModernStatus "Backup file may be corrupted or incomplete" -Status Error
+                return $false
+            }
+        }
+        
+        # Get final backup details
+        $backupFile = Get-Item $backupPath
+        $backupSize = [math]::Round($backupFile.Length / 1KB, 2)
+        
+        # Display success summary
+        Write-ModernStatus "Registry backup created successfully!" -Status Success
         Write-ModernCard "Backup Location" $backupPath
-        Write-ModernCard "Backup Time" $backupData.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
-        Write-ModernCard "Backup Scope" $(if ($AllUsers) { "All Users" } else { "Current User" })
+        Write-ModernCard "Backup Size" "$backupSize KB"
+        Write-ModernCard "Backup Time" $timestamp
+        Write-ModernCard "Backup Scope" $(if ($AllUsers) { "All Users (Group Policy)" } else { "Current User" })
         Write-ModernCard "Original Value" $(if ($null -eq $currentConfig) { "Not Set (Default)" } else { $currentConfig })
+        
+        # Security note for all users backup
+        if ($AllUsers) {
+            Write-Host ""
+            Write-ModernStatus "SECURITY NOTE: This backup contains Group Policy settings that affect all users." -Status Warning
+            Write-ModernStatus "Store this file securely and limit access permissions." -Status Warning
+        }
         
         return $true
     }
     catch {
-        Write-ModernStatus "Failed to create registry backup: $($_.Exception.Message)" -Status Error
+        Write-ModernStatus "Backup creation failed: $($_.Exception.Message)" -Status Error
+        Write-ModernStatus "Exception Type: $($_.Exception.GetType().FullName)" -Status Warning
         return $false
     }
 }
@@ -2351,12 +2694,42 @@ function Get-CurrentTrayConfiguration {
 function Set-TrayIconConfiguration {
     <#
     .SYNOPSIS
-        Configures tray icon behavior with backup and rollback support.
+        Configures tray icon behavior with comprehensive backup and rollback support.
+    .DESCRIPTION
+        Modifies registry settings to control system tray icon visibility with optional backup creation
+        and advanced backup options including custom paths, compression, and cache exclusion.
+    .PARAMETER Behavior
+        Specifies the desired behavior: 'Enable' to show all icons or 'Disable' for Windows default.
+    .PARAMETER ForceBackup
+        Overwrites existing backup files without confirmation.
+    .PARAMETER CustomPath
+        Specifies a custom path for the backup file instead of the default location.
+    .PARAMETER ExcludeCache
+        Excludes icon cache data to reduce backup size (not recommended for complete restoration).
+    .PARAMETER CompressBackup
+        Compresses backup file to reduce storage footprint.
+    .EXAMPLE
+        Set-TrayIconConfiguration -Behavior Enable -ForceBackup
+        Enables all tray icons and overwrites any existing backup file.
+    .EXAMPLE
+        Set-TrayIconConfiguration -Behavior Enable -CustomPath "C:\Backups\TrayIcons-$(Get-Date -Format 'yyyyMMdd').json" -CompressBackup
+        Enables all tray icons with timestamped, compressed backup in custom location.
     #>
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet('Enable', 'Disable')]
-        [string]$Behavior
+        [string]$Behavior,
+        [Parameter(Mandatory = $false)]
+        [switch]$Force, 
+        [Parameter(Mandatory = $false)]
+        [switch]$ForceBackup,
+        [Parameter(Mandatory = $false)]
+        [string]$CustomPath,
+        [Parameter(Mandatory = $false)]
+        [switch]$ExcludeCache,
+        [Parameter(Mandatory = $false)]
+        [switch]$CompressBackup
     )
     
     $value = if ($Behavior -eq 'Enable') { 
@@ -2377,15 +2750,27 @@ function Set-TrayIconConfiguration {
         "Registry: $($Script:Configuration.RegistryPath)\$($Script:Configuration.RegistryValue)", 
         "Set value to $value ($actionDescription)"
     )) {
-        Write-ModernStatus "Operation cancelled by ShouldProcess" -Status Info
+        Write-ModernStatus "Operation cancelled by user confirmation" -Status Info
         return $false
     }
     
     # Create backup if requested
     if ($BackupRegistry) {
         Write-ModernStatus "Creating registry backup before changes..." -Status Info
-        if (-not (Backup-RegistryConfiguration -Force:$Force)) {
-            Write-ModernStatus "Backup failed, but continuing with operation..." -Status Warning
+        $backupParams = @{
+            Overwrite = $Force -or $ForceBackup
+        }
+        if ($CustomPath) { $backupParams.CustomPath = $CustomPath }
+        if ($ExcludeCache) { $backupParams.ExcludeCache = $true }
+        if ($CompressBackup) { $backupParams.CompressBackup = $true }
+        
+        $backupResult = Backup-ComprehensiveTraySettings @backupParams
+        if (-not $backupResult) {
+            if ($Force) {
+                Write-ModernStatus "Backup skipped or failed but continuing due to -Force parameter" -Status Warning
+            } else {
+                Write-ModernStatus "Backup creation failed or skipped. Continuing with configuration change." -Status Warning
+            }
         }
     }
     
@@ -2406,14 +2791,38 @@ function Set-TrayIconConfiguration {
                          -ErrorAction Stop
         
         Write-ModernStatus "Registry configuration updated successfully: $actionDescription" -Status Success
+        
+        # Additional status information for enabled state
+        if ($Behavior -eq 'Enable') {
+            Write-ModernStatus "All system tray icons will be visible after Explorer restart" -Status Info
+            if (-not $RestartExplorer) {
+                Write-ModernStatus "Use -RestartExplorer parameter to apply changes immediately" -Status Info
+            }
+        }
+        
         return $true
     }
     catch [System.UnauthorizedAccessException] {
         Write-ModernStatus "Access denied to registry. Try running as Administrator." -Status Error
+        Write-ModernStatus "This operation may require elevated privileges to modify system settings" -Status Warning
         return $false
     }
     catch {
         Write-ModernStatus "Failed to configure registry: $($_.Exception.Message)" -Status Error
+        Write-ModernStatus "Exception Type: $($_.Exception.GetType().FullName)" -Status Warning
+        
+        # Attempt rollback if backup was created
+        if ($BackupRegistry) {
+            Write-ModernStatus "Attempting to rollback changes using backup..." -Status Processing
+            $rollbackParams = @{}
+            if ($CustomPath) { $rollbackParams.BackupPath = $CustomPath }
+            if (Restore-ComprehensiveTraySettings @rollbackParams) {
+                Write-ModernStatus "Rollback successful. System restored to previous state." -Status Success
+            } else {
+                Write-ModernStatus "Rollback failed. Manual intervention may be required." -Status Error
+            }
+        }
+        
         return $false
     }
 }
@@ -2491,7 +2900,6 @@ function Invoke-MainExecution {
     .NOTES
         This function maintains state throughout execution and sets appropriate exit codes.
         It ensures proper privilege validation before performing sensitive operations.
-        Version: 5.8
     #>
     [CmdletBinding()]
     param()
@@ -2503,7 +2911,8 @@ function Invoke-MainExecution {
     Write-ModernCard "Target Scope" $(if ($AllUsers) { "All Users (Group Policy)" } else { "Current User Only" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
     Write-ModernCard "Explorer Restart" $(if ($RestartExplorer) { "Enabled" } else { "Disabled" }) -ValueColor $(if ($RestartExplorer) { "Info" } else { "Warning" })
     Write-ModernCard "Registry Backup" $(if ($BackupRegistry -or $Action -in @('Backup', 'Rollback')) { "Enabled" } else { "Disabled" }) -ValueColor $(if ($BackupRegistry -or $Action -in @('Backup', 'Rollback')) { "Info" } else { "Warning" })
-    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled (Confirmation required)" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+    Write-ModernCard "Force Backup" $(if ($ForceBackup) { "Enabled (Overwrite backups)" } else { "Disabled" }) -ValueColor $(if ($ForceBackup) { "Warning" } else { "Info" })
     Write-ModernCard "Admin Context" $(if (Test-AdministratorRights) { "Elevated" } else { "Standard" }) -ValueColor $(if (Test-AdministratorRights) { "Success" } else { "Warning" })
     Write-Host ""
 
@@ -2620,30 +3029,35 @@ function Invoke-MainExecution {
                 Show-EnhancedStatus
             }
             'backup' {
-                if ($AllUsers) {
-                    Write-ModernHeader "Enterprise Backup" "Comprehensive configuration backup for ALL users"
-                    Write-ModernStatus "Creating system-wide backup with Group Policy settings..." -Status Processing
-                } 
-                else {
-                    Write-ModernHeader "Configuration Backup" "Current user settings preservation"
-                    Write-ModernStatus "Creating backup of current user tray icon settings..." -Status Processing
-                }
-                
-                if (Backup-ComprehensiveTraySettings) {
-                    Write-ModernStatus "Backup completed successfully" -Status Success
-                    Write-ModernCard "Backup Location" $(if ($AllUsers) { $Script:Configuration.AllUsersBackupPath } else { $Script:Configuration.BackupRegistryPath })
-                } 
-                else {
-                    $Script:Configuration.ExitCode = $Script:Configuration.ExitCodes.BackupFailed
-                    Write-ModernStatus "Backup operation failed - no changes were made" -Status Error
-                }
+	            if ($AllUsers) {
+	                Write-ModernHeader "Create Comprehensive Backup" "Saving ALL tray-related settings for ALL users"
+	                Write-ModernStatus "Backup mode: ALL USERS (Group Policy configuration)" -Status Info
+	            } else {
+	                Write-ModernHeader "Create Comprehensive Backup" "Saving ALL tray-related settings"
+	                Write-ModernStatus "Backup mode: CURRENT USER ONLY" -Status Info
+	            }
+            
+		$backupParams = @{
+		    Overwrite = $ForceBackup -or $Force
+		}
+		if ($CustomPath) { $backupParams.CustomPath = $CustomPath }
+		if ($ExcludeCache) { $backupParams.ExcludeCache = $true }
+		if ($CompressBackup) { $backupParams.CompressBackup = $true }
+		if (Backup-ComprehensiveTraySettings @backupParams) {
+		    Write-ModernStatus "Comprehensive backup completed successfully!" -Status Success
+		} else {
+		    $Script:Configuration.ExitCode = $Script:Configuration.ExitCodes.BackupFailed
+		    Write-ModernStatus "Backup operation failed" -Status Error
+		}
             }
             'enable' {
                 if ($AllUsers) {
+                    $success = Set-GroupPolicyConfiguration -Behavior 'Enable'
                     Write-ModernHeader "Enterprise Configuration" "Enable ALL Tray Icons for ALL Users"
                     Write-ModernStatus "Configuring system-wide tray icon visibility via Group Policy..." -Status Warning
                 } 
                 else {
+                    $success = Set-TrayIconConfiguration -Behavior 'Enable' -Force:$Force -ForceBackup:$ForceBackup
                     Write-ModernHeader "Tray Icon Configuration" "Enable ALL Icons for Current User"
                     Write-ModernStatus "Configuring comprehensive tray icon visibility..." -Status Processing
                 }
@@ -2653,6 +3067,24 @@ function Invoke-MainExecution {
                     Write-ModernStatus "Creating automatic configuration backup..." -Status Info
                     $BackupRegistry = $true
                 }
+
+	if ($BackupRegistry) {
+	    $backupParams = @{
+	        Overwrite = $script:Force -or $script:ForceBackup
+	    }
+	    if ($CustomPath) { $backupParams.CustomPath = $CustomPath }
+	    if ($ExcludeCache) { $backupParams.ExcludeCache = $true }
+	    if ($CompressBackup) { $backupParams.CompressBackup = $true }
+	    Write-ModernStatus "Creating registry backup before changes..." -Status Info
+	    $backupResult = Backup-ComprehensiveTraySettings @backupParams
+	    if (-not $backupResult) {
+	        if ($Force) {
+	            Write-ModernStatus "Backup skipped or failed but continuing due to -Force parameter" -Status Warning
+	        } else {
+	            Write-ModernStatus "Backup creation failed or skipped. Continuing with configuration change." -Status Warning
+	        }
+	    }
+	}
                 
                 if (Enable-AllTrayIconsComprehensive -SkipParameterDisplay) {
                     if ($RestartExplorer) {
@@ -2810,7 +3242,6 @@ function Enable-AllTrayIconsComprehensive {
         Enables all tray icons without showing the parameter display header.
     .NOTES
         Author: Mikhail Deynekin
-        Version: 5.8
         Requires Administrator privileges when using -AllUsers parameter
     #>
     [CmdletBinding()]
@@ -2827,7 +3258,7 @@ function Enable-AllTrayIconsComprehensive {
         Write-ModernCard "AllUsers" $(if ($AllUsers) { "Enabled (Group Policy mode)" } else { "Disabled (Current user only)" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
         Write-ModernCard "RestartExplorer" $(if ($RestartExplorer) { "Yes" } else { "No" })
         Write-ModernCard "BackupRegistry" $(if ($BackupRegistry) { "Yes" } else { "No" })
-        Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled (Confirmation required)" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+        Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
         Write-ModernCard "Admin Rights" $(if (Test-AdministratorRights) { "Available" } else { "Not available" }) -ValueColor $(if (Test-AdministratorRights) { "Success" } else { "Error" })
         Write-Host ""
     }
@@ -3121,4 +3552,3 @@ finally {
     
     exit $Script:Configuration.ExitCode
 }
-
