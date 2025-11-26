@@ -7,7 +7,7 @@
     Features comprehensive error handling, logging, session validation, rollback support,
     individual icon settings reset, Group Policy management, and advanced diagnostic capabilities.
     
-    NEW IN VERSION 5.7:
+    NEW IN VERSION 5.7.1:
     - Administrator rights validation and elevation support
     - Group Policy configuration for all users
     - Enhanced enterprise deployment features
@@ -18,7 +18,7 @@
     Author: Mikhail Deynekin (mid1977@gmail.com)
     Website: https://deynekin.com
     Repository: https://github.com/paulmann/windows-show-all-tray-icons
-    Version: 5.7 (Enterprise Edition - Group Policy Enhanced)
+    Version: 5.7.1 (Enterprise Edition - Group Policy Enhanced)
 
 .PARAMETER Action
     Specifies the action to perform:
@@ -91,7 +91,7 @@
     Runs backup file diagnostics and validation checks.
 
 .NOTES
-    Version:        5.7 (Enterprise Edition - Group Policy Enhanced)
+    Version:        5.7.1 (Enterprise Edition - Group Policy Enhanced)
     Creation Date:  2025-11-21
     Last Updated:   2025-11-23
     Compatibility:  Windows 10 (All versions), Windows 11 (All versions), Server 2019+
@@ -174,7 +174,7 @@ $Script:Configuration = @{
     GroupPolicyValue = "EnableAutoTray"
     
     # Script Metadata
-    ScriptVersion = "5.7"
+    ScriptVersion = "5.7.1"
     ScriptAuthor = "Mikhail Deynekin (mid1977@gmail.com)"
     ScriptName = "Enable-AllTrayIcons.ps1"
     GitHubRepository = "https://github.com/paulmann/windows-show-all-tray-icons"
@@ -544,7 +544,6 @@ function Show-ModernHelp {
     Write-Host "  Check status                     : .\$($Script:Configuration.ScriptName) -Action Status" -ForegroundColor $Script:ConsoleColors.Light
     Write-Host "  Create backup                    : .\$($Script:Configuration.ScriptName) -Action Backup" -ForegroundColor $Script:ConsoleColors.Light
     Write-Host "  Restore backup                   : .\$($Script:Configuration.ScriptName) -Action Rollback" -ForegroundColor $Script:ConsoleColors.Light
-    Write-Host "  Check and update                 : .\$($Script:Configuration.ScriptName) -Update" -ForegroundColor $Script:ConsoleColors.Light
     Write-Host ""
     Write-EnhancedOutput "ACTIONS:" -Type Primary
     Write-ModernCard "Enable" "Show all tray icons (disable auto-hide)"
@@ -577,9 +576,9 @@ function Show-ModernHelp {
     Write-Host ""
     Write-EnhancedOutput "HELP LEVEL EXAMPLES:" -Type Primary
     Write-Host "  Show full documentation           : .\$($Script:Configuration.ScriptName) -Help" -ForegroundColor $Script:ConsoleColors.Light
-    Write-Host "  Show quick reference              : .\$($Script:Configuration.ScriptName) -HelpLevel Quick" -ForegroundColor $Script:ConsoleColors.Light
-    Write-Host "  Show admin instructions           : .\$($Script:Configuration.ScriptName) -HelpLevel Admin" -ForegroundColor $Script:ConsoleColors.Light
-    Write-Host "  Show security context             : .\$($Script:Configuration.ScriptName) -HelpLevel Security" -ForegroundColor $Script:ConsoleColors.Light
+    Write-Host "  Show quick reference              : .\$($Script:Configuration.ScriptName) -Help -HelpLevel Quick" -ForegroundColor $Script:ConsoleColors.Light
+    Write-Host "  Show admin instructions           : .\$($Script:Configuration.ScriptName) -Help -HelpLevel Admin" -ForegroundColor $Script:ConsoleColors.Light
+    Write-Host "  Show security context             : .\$($Script:Configuration.ScriptName) -Help -HelpLevel Security" -ForegroundColor $Script:ConsoleColors.Light
     Write-Host ""
     Write-EnhancedOutput "ADVANCED FEATURES:" -Type Primary
     Write-ModernCard "Administrator Rights Check" "Automatic validation for Group Policy operations"
@@ -630,7 +629,6 @@ function Show-QuickHelp {
     Write-Host "  Check status                     : .\$($Script:Configuration.ScriptName) -Action Status" -ForegroundColor Gray
     Write-Host "  Create backup                    : .\$($Script:Configuration.ScriptName) -Action Backup" -ForegroundColor Gray
     Write-Host "  Restore backup                   : .\$($Script:Configuration.ScriptName) -Action Rollback" -ForegroundColor Gray
-    Write-Host "  Check and update                 : .\$($Script:Configuration.ScriptName) -Update" -ForegroundColor Gray
     Write-Host ""
     
     Write-Host "ACTIONS:" -ForegroundColor Yellow
@@ -726,8 +724,8 @@ function Invoke-HelpSystem {
         Write-Host ""
         Write-EnhancedOutput "Examples:" -Type Info
         Write-Host "  .\$($Script:Configuration.ScriptName) -Help" -ForegroundColor Yellow
-        Write-Host "  .\$($Script:Configuration.ScriptName) -HelpLevel Full" -ForegroundColor Yellow
-        Write-Host "  .\$($Script:Configuration.ScriptName) -HelpLevel Admin" -ForegroundColor Yellow
+        Write-Host "  .\$($Script:Configuration.ScriptName) -Help -HelpLevel Full" -ForegroundColor Yellow
+        Write-Host "  .\$($Script:Configuration.ScriptName) -Help -HelpLevel Admin" -ForegroundColor Yellow
         Write-Host ""
         exit $Script:Configuration.ExitCodes.GeneralError
     }
@@ -1152,9 +1150,17 @@ function Enable-AllTrayIconsComprehensive {
     .SYNOPSIS
         Comprehensive method to enable ALL tray icons using multiple techniques.
     #>
+    if ($AllUsers) {
+        Write-ModernStatus "Running in ALL USERS mode (Group Policy configuration)" -Status Warning
+        if (-not (Test-AdministratorRights)) {
+            Write-ModernStatus "ERROR: Administrator rights required for -AllUsers parameter" -Status Error
+            return $false
+        }
+    } else {
+        Write-ModernStatus "Running in CURRENT USER ONLY mode" -Status Info
+    }
     
     Write-ModernStatus "Enabling ALL tray icons using comprehensive methods..." -Status Processing
-    
     $methods = @{
         AutoTrayDisabled = $false
         IndividualSettingsReset = $false
@@ -1162,96 +1168,120 @@ function Enable-AllTrayIconsComprehensive {
         NotificationSettingsReset = $false
         SystemIconsForced = $false
         Windows11Optimized = $false
+        GroupPolicyApplied = $false
     }
-    
     try {
         # Method 1: Disable AutoTray (original method)
         if ($AllUsers) {
+            Write-ModernStatus "Applying Group Policy configuration for all users..." -Status Processing
             if (Set-GroupPolicyConfiguration -Behavior 'Enable') {
                 $methods.AutoTrayDisabled = $true
+                $methods.GroupPolicyApplied = $true
+                Write-ModernStatus "Group Policy configuration successfully applied" -Status Success
+            } else {
+                Write-ModernStatus "Group Policy configuration failed" -Status Error
             }
         } else {
+            Write-ModernStatus "Applying registry configuration for current user..." -Status Processing
             if (Set-TrayIconConfiguration -Behavior 'Enable') {
                 $methods.AutoTrayDisabled = $true
+                Write-ModernStatus "Registry configuration successfully applied" -Status Success
+            } else {
+                Write-ModernStatus "Registry configuration failed" -Status Error
             }
         }
         
-        # Method 2: Reset individual icon settings
-        $resetResults = Reset-IndividualIconSettings
-        if ($resetResults.Values -contains $true) {
-            $methods.IndividualSettingsReset = $true
-        }
-        
-        # Set specific method results from individual reset
-        $methods.TrayCacheCleared = $resetResults.TrayNotify
-        $methods.NotificationSettingsReset = $resetResults.NotificationSettings
-        
-        # Method 3: Additional registry tweaks for stubborn icons
-        
-        # Force show all system icons
-        $systemIconsPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
-        $systemIcons = @(
-            @{Name = "HideSCAVolume"; Value = 0},
-            @{Name = "HideSCANetwork"; Value = 0},
-            @{Name = "HideSCAPower"; Value = 0}
-        )
-        
-        $systemIconsSet = 0
-        foreach ($icon in $systemIcons) {
-            try {
-                # Ensure the registry path exists
-                if (-not (Test-Path $systemIconsPath)) {
-                    $null = New-Item -Path $systemIconsPath -Force -ErrorAction Stop
-                }
-                
-                # Always set the value (don't check current state)
-                Set-ItemProperty -Path $systemIconsPath -Name $icon.Name -Value $icon.Value -Type DWord -Force -ErrorAction Stop
-                $systemIconsSet++
-                Write-ModernStatus "System icon '$($icon.Name)' forced to show" -Status Success
+        # Method 2: Reset individual icon settings (только для текущего пользователя)
+        if (-not $AllUsers) {
+            Write-ModernStatus "Resetting individual icon settings for current user..." -Status Processing
+            $resetResults = Reset-IndividualIconSettings
+            if ($resetResults.Values -contains $true) {
+                $methods.IndividualSettingsReset = $true
+                Write-ModernStatus "Individual icon settings reset completed" -Status Success
+            } else {
+                Write-ModernStatus "No individual icon settings were reset" -Status Info
             }
-            catch {
-                Write-ModernStatus "Failed to set system icon '$($icon.Name)': $($_.Exception.Message)" -Status Warning
-            }
-        }
-        
-        if ($systemIconsSet -gt 0) {
-            $methods.SystemIconsForced = $true
-            Write-ModernStatus "System icons forced to show ($systemIconsSet settings)" -Status Success
+            # Set specific method results from individual reset
+            $methods.TrayCacheCleared = $resetResults.TrayNotify
+            $methods.NotificationSettingsReset = $resetResults.NotificationSettings
         } else {
-            Write-ModernStatus "No system icons were configured" -Status Warning
+            Write-ModernStatus "Skipping individual icon settings reset (AllUsers mode only applies Group Policy)" -Status Info
         }
         
-        # Method 4: Reset Windows 11 specific settings
-        $windowsVersion = Get-WindowsVersion
-        if ($windowsVersion -Like "*11*") {
-            $win11Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-            if (Test-Path $win11Path) {
+        # Method 3: Additional registry tweaks for stubborn icons (только для текущего пользователя)
+        if (-not $AllUsers) {
+            # Force show all system icons
+            $systemIconsPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+            $systemIcons = @(
+                @{Name = "HideSCAVolume"; Value = 0},
+                @{Name = "HideSCANetwork"; Value = 0},
+                @{Name = "HideSCAPower"; Value = 0}
+            )
+            $systemIconsSet = 0
+            foreach ($icon in $systemIcons) {
                 try {
-                    Set-ItemProperty -Path $win11Path -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-                    $methods.Windows11Optimized = $true
-                    Write-ModernStatus "Windows 11 specific settings applied" -Status Success
+                    # Ensure the registry path exists
+                    if (-not (Test-Path $systemIconsPath)) {
+                        $null = New-Item -Path $systemIconsPath -Force -ErrorAction Stop
+                    }
+                    # Always set the value (don't check current state)
+                    Set-ItemProperty -Path $systemIconsPath -Name $icon.Name -Value $icon.Value -Type DWord -Force -ErrorAction Stop
+                    $systemIconsSet++
+                    Write-ModernStatus "System icon '$($icon.Name)' forced to show" -Status Success
                 }
                 catch {
-                    Write-ModernStatus "Windows 11 specific settings failed: $($_.Exception.Message)" -Status Warning
+                    Write-ModernStatus "Failed to set system icon '$($icon.Name)': $($_.Exception.Message)" -Status Warning
                 }
-            } else {
-                Write-ModernStatus "Windows 11 Advanced path not found" -Status Warning
             }
-        } else {
-            Write-ModernStatus "Windows 11 specific settings skipped (not Windows 11)" -Status Info
+            if ($systemIconsSet -gt 0) {
+                $methods.SystemIconsForced = $true
+                Write-ModernStatus "System icons forced to show ($systemIconsSet settings)" -Status Success
+            } else {
+                Write-ModernStatus "No system icons were configured" -Status Warning
+            }
         }
         
+        # Method 4: Reset Windows 11 specific settings (только для текущего пользователя)
+        if (-not $AllUsers) {
+            $windowsVersion = Get-WindowsVersion
+            if ($windowsVersion -Like "*11*") {
+                $win11Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+                if (Test-Path $win11Path) {
+                    try {
+                        Set-ItemProperty -Path $win11Path -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+                        $methods.Windows11Optimized = $true
+                        Write-ModernStatus "Windows 11 specific settings applied" -Status Success
+                    }
+                    catch {
+                        Write-ModernStatus "Windows 11 specific settings failed: $($_.Exception.Message)" -Status Warning
+                    }
+                } else {
+                    Write-ModernStatus "Windows 11 Advanced path not found" -Status Warning
+                }
+            } else {
+                Write-ModernStatus "Windows 11 specific settings skipped (not Windows 11)" -Status Info
+            }
+        }
+
         Write-ModernStatus "Comprehensive tray icon enabling completed" -Status Success
-        
         # Display results
         Write-Host ""
         Write-EnhancedOutput "METHODS APPLIED:" -Type Primary
         foreach ($method in $methods.GetEnumerator() | Sort-Object Key) {
-            $status = if ($method.Value) { "Success" } else { "Failed" }
-            $color = if ($method.Value) { "Success" } else { "Warning" }
-            Write-ModernCard $method.Key $status -ValueColor $color
+            $status = if ($method.Value) { "Success" } else { "Skipped/Failed" }
+            $color = if ($method.Value) { "Success" } else { 
+                if ($method.Key -in @("IndividualSettingsReset", "SystemIconsForced", "Windows11Optimized") -and $AllUsers) { 
+                    "Info" 
+                } else { 
+                    "Warning" 
+                }
+            }
+            $description = $status
+            if ($AllUsers -and $method.Key -in @("IndividualSettingsReset", "SystemIconsForced", "Windows11Optimized")) {
+                $description = "Skipped (AllUsers mode)"
+            }
+            Write-ModernCard $method.Key $description -ValueColor $color
         }
-        
         return $true
     }
     catch {
@@ -1700,40 +1730,44 @@ function Invoke-ScriptUpdate {
     .SYNOPSIS
         Enhanced script update with PowerShell 7+ features when available.
     #>
+    
     Write-ModernHeader "Script Update" "Checking for updates..."
+    
     try {
         Write-ModernStatus "Checking GitHub repository for updates..." -Status Processing
+        
         # Use Invoke-RestMethod for PowerShell 7+, WebClient for 5.0
         if ($Script:IsPS7Plus) {
             Write-ModernStatus "Using enhanced download method (PowerShell 7+)" -Status Info
-            $latestScriptContent = Invoke-RestMethod -Uri $Script:Configuration.UpdateUrl -UserAgent "PowerShell Script Update"
+            $latestScriptContent = Invoke-RestMethod -Uri $Script:Configuration.UpdateUrl -UserAgent "PowerShell Script Update Check"
         } else {
             $webClient = New-Object System.Net.WebClient
             $webClient.Headers.Add('User-Agent', 'PowerShell Script Update Check')
             $latestScriptContent = $webClient.DownloadString($Script:Configuration.UpdateUrl)
         }
+        
         # Extract version from downloaded script
         $versionPattern = 'ScriptVersion\s*=\s*"([0-9]+\.[0-9]+)"'
         $versionMatch = [regex]::Match($latestScriptContent, $versionPattern)
+        
         if (-not $versionMatch.Success) {
             Write-ModernStatus "Could not determine version from repository" -Status Warning
             return $false
         }
+        
         $latestVersion = $versionMatch.Groups[1].Value
         $currentVersion = $Script:Configuration.ScriptVersion
+        
         Write-ModernCard "Current Version" $currentVersion
         Write-ModernCard "Latest Version" $latestVersion
+        
         if ([version]$latestVersion -gt [version]$currentVersion) {
             Write-ModernStatus "New version available! Updating..." -Status Info
             
-            # Правильное определение пути к текущему скрипту
-            $currentScriptPath = if ($PSCommandPath) {
-                $PSCommandPath
-            } else {
-                Join-Path $PSScriptRoot $Script:Configuration.ScriptName
-            }
-            
+            # Get current script path
+            $currentScriptPath = $MyInvocation.MyCommand.Path
             $backupPath = "$currentScriptPath.backup"
+            
             # Create backup of current script (don't overwrite if exists)
             if (-not (Test-Path $backupPath)) {
                 Copy-Item -Path $currentScriptPath -Destination $backupPath -Force
@@ -1741,10 +1775,13 @@ function Invoke-ScriptUpdate {
             } else {
                 Write-ModernStatus "Script backup already exists, preserving: $backupPath" -Status Info
             }
+            
             # Write new version
             $latestScriptContent | Out-File -FilePath $currentScriptPath -Encoding UTF8
+            
             Write-ModernStatus "Update completed successfully!" -Status Success
             Write-ModernStatus "Please restart the script to use the new version." -Status Info
+            
             return $true
         }
         else {
@@ -2103,6 +2140,17 @@ function Invoke-MainExecution {
         Enhanced main execution engine with comprehensive tray icons management.
     #>
     # Show banner only once at the very beginning for specific scenarios
+
+    Write-Host ""
+    Write-ModernHeader "Script Execution Parameters" "Configuration Details"
+    Write-ModernCard "Action" $(if ($Action) { $Action } else { "Not specified" })
+    Write-ModernCard "AllUsers" $(if ($AllUsers) { "Enabled (Group Policy mode)" } else { "Disabled (Current user only)" }) -ValueColor $(if ($AllUsers) { "Warning" } else { "Info" })
+    Write-ModernCard "RestartExplorer" $(if ($RestartExplorer) { "Yes" } else { "No" })
+    Write-ModernCard "BackupRegistry" $(if ($BackupRegistry) { "Yes" } else { "No" })
+    Write-ModernCard "Force Mode" $(if ($Force) { "Enabled (No prompts)" } else { "Disabled (Confirmation required)" }) -ValueColor $(if ($Force) { "Warning" } else { "Info" })
+    Write-ModernCard "Admin Rights" $(if (Test-AdministratorRights) { "Available" } else { "Not available" }) -ValueColor $(if (Test-AdministratorRights) { "Success" } else { "Error" })
+    Write-Host ""
+
     $showBanner = $true
     
     # Handle Diagnostic first
@@ -2218,8 +2266,10 @@ function Invoke-MainExecution {
         'backup' {
             if ($AllUsers) {
                 Write-ModernHeader "Create Comprehensive Backup" "Saving ALL tray-related settings for ALL users"
+                Write-ModernStatus "Backup mode: ALL USERS (Group Policy configuration)" -Status Info
             } else {
                 Write-ModernHeader "Create Comprehensive Backup" "Saving ALL tray-related settings"
+                Write-ModernStatus "Backup mode: CURRENT USER ONLY" -Status Info
             }
             if (Backup-ComprehensiveTraySettings) {
                 Write-ModernStatus "Comprehensive backup completed successfully!" -Status Success
@@ -2231,8 +2281,16 @@ function Invoke-MainExecution {
         'enable' {
             if ($AllUsers) {
                 Write-ModernHeader "Enable ALL Tray Icons" "Group Policy method - applying to ALL users"
+                Write-ModernStatus "Configuration mode: ALL USERS via Group Policy" -Status Warning
+                if (-not (Test-AdministratorRights)) {
+                    Write-ModernStatus "ERROR: Administrator rights required for -AllUsers parameter" -Status Error
+                    Show-AdministratorInstructions
+                    $Script:Configuration.ExitCode = $Script:Configuration.ExitCodes.AdminRightsRequired
+                    return
+                }
             } else {
                 Write-ModernHeader "Enable ALL Tray Icons" "Comprehensive method - forcing all icons visible"
+                Write-ModernStatus "Configuration mode: CURRENT USER ONLY" -Status Info
             }
             if (Enable-AllTrayIconsComprehensive) {
                 if ($RestartExplorer) {
@@ -2241,6 +2299,9 @@ function Invoke-MainExecution {
                 }
                 else {
                     Write-ModernStatus "Comprehensive configuration completed!" -Status Success
+                    if ($AllUsers) {
+                        Write-ModernStatus "Group Policy changes require user logoff/logon or system restart to fully apply" -Status Warning
+                    }
                     Write-ModernStatus "Restart Explorer or use -RestartExplorer to apply changes" -Status Info
                 }
             }
@@ -2248,7 +2309,7 @@ function Invoke-MainExecution {
                 $Script:Configuration.ExitCode = $Script:Configuration.ExitCodes.GeneralError
             }
         }
-        'disable' {
+       'disable' {
             if ($AllUsers) {
                 Write-ModernHeader "Restore Default Behavior" "Group Policy method - enabling auto-hide for ALL users"
             } else {
@@ -2346,3 +2407,4 @@ finally {
     
     exit $Script:Configuration.ExitCode
 }
+
