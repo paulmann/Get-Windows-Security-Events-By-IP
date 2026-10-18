@@ -1,7 +1,6 @@
 # Get Windows Security Events By IP
 
 [![Version](https://img.shields.io/badge/version-5.0.2-blue.svg)](https://github.com/paulmann/Get-Windows-Security-Events-By-IP)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PowerShell](https://img.shields.io/badge/powershell-5.1%2B-blue.svg)](https://docs.microsoft.com/en-us/powershell/)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%2FServer-blue.svg)](https://www.microsoft.com/windows/)
 [![Event Log](https://img.shields.io/badge/event%20log-Security%20Events-blue.svg)](https://docs.microsoft.com/en-us/windows/win32/eventlog/event-logging)
