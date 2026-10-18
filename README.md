@@ -2981,7 +2981,7 @@ We appreciate all contributions that help make Windows security event analysis m
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for full details.
+This project is licensed under the PolyForm Noncommercial License 1.0.0 - see the [LICENSE](LICENSE) file for full details.
 
 ### 📋 **License Summary**
 
