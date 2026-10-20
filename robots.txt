@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://paulmann.github.io/Get-Windows-Security-Events-By-IP/sitemap.xml
