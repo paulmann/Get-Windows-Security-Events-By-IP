@@ -1,0 +1,29 @@
+# Build artifacts
+output/
+dist/
+*.zip
+*.nupkg
+
+# Test artifacts
+testResults.xml
+coverage.xml
+TestResults/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+
+# Local case bundles (evidence!) — never commit investigation data
+WinSecHunter-Cases/
+WSC-*/
+*-reports/
+
+# Local tooling state — never part of the product
+.ragraf/
+.zwork/
+.verify/
+
+# Local task/planning documents (not part of the product)
+TASK-LLM-*.md
+

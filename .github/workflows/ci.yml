@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Analyzer + Pester (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show PowerShell version
+        run: $PSVersionTable | Out-String | Write-Host
+
+      - name: Require PowerShell 7.6+
+        run: |
+          if ($PSVersionTable.PSVersion -lt [version]'7.6') {
+            throw "WinSecHunter requires PowerShell 7.6+; runner has $($PSVersionTable.PSVersion)."
+          }
+          Write-Host "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition)) OK"
+
+      - name: Install test dependencies
+        run: |
+          Install-Module Pester -RequiredVersion 5.4.1 -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: 'PSScriptAnalyzer (gate: Error + Warning)'
+        run: |
+          # TypeNotFound is an analyzer diagnostic (not a rule): classes/enums are
+          # module-scoped and resolve at import — covered by the Pester import tests.
+          $results = @(Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./PSScriptAnalyzerSettings.psd1 -Severity Error, Warning |
+              Where-Object RuleName -ne 'TypeNotFound')
+          if ($results.Count -gt 0) {
+            $results | Format-Table -AutoSize Severity, RuleName, ScriptName, Line, Message | Out-String -Width 200 | Write-Host
+            throw "PSScriptAnalyzer found $($results.Count) Error/Warning issue(s)."
+          }
+          Write-Host 'PSScriptAnalyzer: clean.'
+
+      - name: Documentation is current
+        run: pwsh -NoProfile -File ./build/Export-CatalogDoc.ps1 -Check
+
+      - name: Run Pester tests
+        run: |
+          $conf = New-PesterConfiguration
+          $conf.Run.Path = './tests'
+          $conf.Run.PassThru = $true
+          $conf.CodeCoverage.Enabled = $true
+          $conf.CodeCoverage.Path = './src'
+          $conf.CodeCoverage.OutputPath = 'coverage.xml'
+          $conf.CodeCoverage.OutputFormat = 'JaCoCo'
+          $conf.TestResult.Enabled = $true
+          $conf.TestResult.OutputPath = 'testResults.xml'
+          $conf.TestResult.OutputFormat = 'JUnitXml'
+          $conf.Output.Verbosity = 'Detailed'
+          $result = Invoke-Pester -Configuration $conf
+          "Coverage: {0:P1}" -f ($result.CodeCoverage.CoveragePercent / 100) | Write-Host
+          if ($result.FailedCount -gt 0) { throw "$($result.FailedCount) test(s) failed." }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            testResults.xml
+            coverage.xml
+
+  windows-smoke:
+    name: Windows live-log smoke test
+    needs: quality
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build + import + live smoke
+        run: |
+          ./build/Build-Module.ps1
+          $mf = Import-PowerShellDataFile ./src/WinSecHunter/WinSecHunter.psd1
+          Import-Module "./output/WinSecHunter/$($mf.ModuleVersion)/WinSecHunter.psd1" -Force
+
+          # Read-only live checks against the runner's own logs.
+          $cov = Get-WinSecLogCoverage -LogName Security
+          if (-not $cov) { throw 'Coverage returned nothing for the Security log.' }
+          Write-Host ("Security log: enabled={0}, records={1}, oldest={2:u}" -f $cov.IsEnabled, $cov.RecordCount, $cov.OldestRecordUtc)
+
+          $cat = @(Get-WinSecEventCatalog)
+          if ($cat.Count -lt 140) { throw "Catalog too small: $($cat.Count)" }
+
+          # Loopback sweep must succeed structurally even with zero matches.
+          $events = @(Get-WinSecEventByIp -IpAddress '127.0.0.1' -LastHours 24 -PassHostStatus -WarningAction SilentlyContinue)
+          Write-Host "Local loopback sweep objects: $($events.Count)"
+
+          # Audit policy analysis runs on the runner (admin).
+          $gaps = @(Test-WinSecAuditPolicy -IncludeCompliant)
+          Write-Host "Audit policy rows: $($gaps.Count)"

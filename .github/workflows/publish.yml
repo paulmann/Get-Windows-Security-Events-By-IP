@@ -1,0 +1,59 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Validate only (no gallery push)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require PowerShell 7.6+
+        run: |
+          if ($PSVersionTable.PSVersion -lt [version]'7.6') {
+            throw "WinSecHunter requires PowerShell 7.6+; runner has $($PSVersionTable.PSVersion)."
+          }
+
+      - name: Install Pester
+        run: Install-Module Pester -RequiredVersion 5.4.1 -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run full test suite
+        run: |
+          $conf = New-PesterConfiguration
+          $conf.Run.Path = './tests'
+          $conf.Run.PassThru = $true
+          $r = Invoke-Pester -Configuration $conf
+          if ($r.FailedCount -gt 0) { throw "$($r.FailedCount) test(s) failed — refusing to publish." }
+
+      - name: Build artifact
+        run: pwsh -NoProfile -File ./build/Build-Module.ps1 -Zip
+
+      - name: Validate tag/version match
+        if: github.event_name == 'push'
+        run: |
+          $mf = Import-PowerShellDataFile ./src/WinSecHunter/WinSecHunter.psd1
+          $tag = '${{ github.ref_name }}'.TrimStart('v')
+          if ("$($mf.ModuleVersion)" -ne $tag) {
+            throw "Tag v$tag does not match manifest version $($mf.ModuleVersion)."
+          }
+
+      - name: Publish to PSGallery
+        if: ${{ github.event_name == 'push' || inputs.dryRun == false }}
+        run: |
+          $mf = Import-PowerShellDataFile ./src/WinSecHunter/WinSecHunter.psd1
+          $path = "./output/WinSecHunter/$($mf.ModuleVersion)"
+          Publish-Module -Path $path -NuGetApiKey '${{ secrets.PSGALLERY_API_KEY }}' -Verbose

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WinSecHunter formatting definitions.
+  SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+-->
+<Configuration>
+  <ViewDefinitions>
+
+    <View>
+      <Name>WinSecEventTable</Name>
+      <ViewSelectedBy><TypeName>WinSecEvent</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>TimeCreated</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Computer</Label><Width>18</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Id</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Outcome</Label><Width>8</Width></TableColumnHeader>
+          <TableColumnHeader><Label>SourceIp</Label><Width>16</Width></TableColumnHeader>
+          <TableColumnHeader><Label>TargetAccount</Label><Width>24</Width></TableColumnHeader>
+          <TableColumnHeader><Label>LT</Label><Width>3</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Status / Event</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>TimeCreated</PropertyName><FormatString>yyyy-MM-dd HH:mm:ss</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>Computer</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>EventId</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Outcome</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SourceIp</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>TargetAccount</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ([int]$_.LogonType -gt 0) { [int]$_.LogonType } else { '' }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ($_.StatusCode) { $_.StatusCode } else { $_.EventName }</ScriptBlock></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecSessionTable</Name>
+      <ViewSelectedBy><TypeName>WinSecSession</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>LogonId</Label><Width>10</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Account</Label><Width>26</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Computer</Label><Width>18</Width></TableColumnHeader>
+          <TableColumnHeader><Label>LogonType</Label><Width>18</Width></TableColumnHeader>
+          <TableColumnHeader><Label>SourceIp</Label><Width>16</Width></TableColumnHeader>
+          <TableColumnHeader><Label>StartUtc</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Admin</Label><Width>5</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Ended</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>LogonId</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Account</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Computer</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>LogonType</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SourceIp</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>StartUtc</PropertyName><FormatString>yyyy-MM-dd HH:mm:ss</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>IsAdmin</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Ended</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecBruteForceFindingTable</Name>
+      <ViewSelectedBy><TypeName>WinSecBruteForceFinding</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Pattern</Label><Width>22</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Severity</Label><Width>9</Width></TableColumnHeader>
+          <TableColumnHeader><Label>TargetAccount</Label><Width>24</Width></TableColumnHeader>
+          <TableColumnHeader><Label>SourceIp</Label><Width>16</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Fail</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>OK</Label><Width>4</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>/min</Label><Width>7</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Description</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>Pattern</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Severity</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>TargetAccount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SourceIp</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>FailureCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SuccessCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>AttemptsPerMinute</PropertyName><FormatString>N1</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>Description</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecLogCoverageTable</Name>
+      <ViewSelectedBy><TypeName>WinSecLogCoverage</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Computer</Label><Width>18</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Log</Label><Width>42</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Enabled</Label><Width>7</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Records</Label><Width>9</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>OldestUtc</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Used%</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Risk</Label><Width>9</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Warning</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>Computer</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>LogName</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>IsEnabled</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>RecordCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>OldestRecordUtc</PropertyName><FormatString>yyyy-MM-dd HH:mm:ss</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>UsedPercent</PropertyName><FormatString>N0</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>Risk</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Warning</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecHostResultTable</Name>
+      <ViewSelectedBy><TypeName>WinSecHostResult</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Computer</Label><Width>26</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Status</Label><Width>10</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Events</Label><Width>8</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Ms</Label><Width>8</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Error</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>Computer</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Status</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>EventsFound</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>DurationMs</PropertyName><FormatString>N0</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>ErrorMessage</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecAuditGapTable</Name>
+      <ViewSelectedBy><TypeName>WinSecAuditGap</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Subcategory</Label><Width>40</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Current</Label><Width>22</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Required</Label><Width>22</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Severity</Label><Width>9</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Affected events</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>Subcategory</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>CurrentSetting</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>RequiredSetting</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Severity</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>$_.AffectedEventIds -join ', '</ScriptBlock></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecTimelineBucketTable</Name>
+      <ViewSelectedBy><TypeName>WinSecTimelineBucket</TypeName></ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Bucket (UTC)</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Count</Label><Width>7</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Fail</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>OK</Label><Width>5</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Accts</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Histogram</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>BucketStartUtc</PropertyName><FormatString>yyyy-MM-dd HH:mm</FormatString></TableColumnItem>
+              <TableColumnItem><PropertyName>Count</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>FailureCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SuccessCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>DistinctAccounts</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Bar</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <View>
+      <Name>WinSecIpAttributionList</Name>
+      <ViewSelectedBy><TypeName>WinSecIpAttribution</TypeName></ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+          <ListItem><PropertyName>IpAddress</PropertyName></ListItem>
+          <ListItem><PropertyName>Version</PropertyName></ListItem>
+          <ListItem><PropertyName>IsPrivate</PropertyName></ListItem>
+          <ListItem><PropertyName>PtrHostname</PropertyName></ListItem>
+          <ListItem><PropertyName>Country</PropertyName></ListItem>
+          <ListItem><PropertyName>Region</PropertyName></ListItem>
+          <ListItem><PropertyName>City</PropertyName></ListItem>
+          <ListItem><PropertyName>Asn</PropertyName></ListItem>
+          <ListItem><PropertyName>AsnOrganization</PropertyName></ListItem>
+          <ListItem><PropertyName>Provider</PropertyName></ListItem>
+          <ListItem><PropertyName>AbuseConfidenceScore</PropertyName></ListItem>
+          <ListItem><PropertyName>TotalReports</PropertyName></ListItem>
+          <ListItem><Label>Categories</Label><ScriptBlock>$_.Categories -join ', '</ScriptBlock></ListItem>
+          <ListItem><PropertyName>Verdict</PropertyName></ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+
+    <View>
+      <Name>WinSecCaseList</Name>
+      <ViewSelectedBy><TypeName>WinSecCase</TypeName></ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+          <ListItem><PropertyName>CaseId</PropertyName></ListItem>
+          <ListItem><PropertyName>Title</PropertyName></ListItem>
+          <ListItem><PropertyName>Description</PropertyName></ListItem>
+          <ListItem><PropertyName>Operator</PropertyName></ListItem>
+          <ListItem><PropertyName>CreatedUtc</PropertyName></ListItem>
+          <ListItem><Label>SubjectIps</Label><ScriptBlock>$_.SubjectIps -join ', '</ScriptBlock></ListItem>
+          <ListItem><Label>ScopeHosts</Label><ScriptBlock>$_.ScopeHosts -join ', '</ScriptBlock></ListItem>
+          <ListItem><Label>Findings</Label><ScriptBlock>$_.Findings.Count</ScriptBlock></ListItem>
+          <ListItem><Label>EvidenceFiles</Label><ScriptBlock>$_.Evidence.Count</ScriptBlock></ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+
+  </ViewDefinitions>
+</Configuration>
+
