@@ -1074,7 +1074,7 @@ Test-WinSecAuditPolicy [[-ComputerName] <string[]>] [[-Credential] <pscredential
 
 The most painful IR discovery is "the events you need were never
 audited". This cmdlet reads the effective advanced audit policy
-(auditpol /get /subcategory:* /r — CSV, parsed locale-independently by
+(auditpol /get /category:* /r — CSV, parsed locale-independently by
 subcategory GUID) and compares it against the WinSecHunter requirement
 matrix derived from the event catalog.
 

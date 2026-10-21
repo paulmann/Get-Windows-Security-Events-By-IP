@@ -8,7 +8,7 @@ function Test-WinSecAuditPolicy {
     .DESCRIPTION
         The most painful IR discovery is "the events you need were never
         audited". This cmdlet reads the effective advanced audit policy
-        (auditpol /get /subcategory:* /r — CSV, parsed locale-independently by
+        (auditpol /get /category:* /r — CSV, parsed locale-independently by
         subcategory GUID) and compares it against the WinSecHunter requirement
         matrix derived from the event catalog.
 
@@ -83,7 +83,7 @@ function Test-WinSecAuditPolicy {
 
     $collector = {
         try {
-            $csv = auditpol /get /subcategory:* /r 2>$null
+            $csv = auditpol /get /category:* /r 2>$null
             if ($LASTEXITCODE -ne 0 -or -not $csv) { return @{ Error = "auditpol failed (exit $LASTEXITCODE). Elevation may be required."; Rows = @() } }
             # auditpol /r header is LOCALIZED; columns are positional and stable.
             # Machine Name, Policy Target, Subcategory, Subcategory GUID, Inclusion Setting, Exclusion Setting
