@@ -96,8 +96,19 @@ $zipPath = $null
 if ($Zip) {
     $zipPath = Join-Path $OutputPath ("WinSecHunter-{0}.zip" -f $version)
     if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
-    [System.IO.Compression.ZipFile]::CreateFromDirectory(
-        $dest, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+    # Layout must be WinSecHunter/<version>/... so the archive can be extracted
+    # straight into any PSModulePath folder.
+    $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        $prefix = "WinSecHunter/$version/"
+        foreach ($file in Get-ChildItem -LiteralPath $dest -Recurse -File) {
+            $relative = $file.FullName.Substring($dest.Length).TrimStart([char[]]@('\', '/')) -replace '\\', '/'
+            $null = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive, $file.FullName, $prefix + $relative,
+                [System.IO.Compression.CompressionLevel]::Optimal)
+        }
+    }
+    finally { $archive.Dispose() }
     Write-Host "Zip: $zipPath"
 }
 
