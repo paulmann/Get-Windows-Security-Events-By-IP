@@ -111,7 +111,8 @@ function Show-WinSecHunterHelp {
             & $line '## Five-minute quick start'
             & $line
             & $line '```powershell'
-            & $line 'Install-Module WinSecHunter -Scope CurrentUser        # or: .\build\Install-Dev.ps1'
+            & $line 'git clone https://github.com/paulmann/Get-Windows-Security-Events-By-IP.git'
+            & $line 'cd Get-Windows-Security-Events-By-IP; ./build/Install-Dev.ps1 -Force'
             & $line '$events = Get-WinSecEventByIp 203.0.113.7 -LastDays 2 -PassHostStatus'
             & $line '$events | Test-WinSecBruteForce'
             & $line '$events | Get-WinSecIpTimeline -AsciiChart'

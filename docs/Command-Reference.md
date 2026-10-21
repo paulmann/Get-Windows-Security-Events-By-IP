@@ -9,7 +9,8 @@ WinSecHunter is an incident-response toolkit for Windows security events. It ans
 ## Five-minute quick start
 
 ```powershell
-Install-Module WinSecHunter -Scope CurrentUser        # or: .\build\Install-Dev.ps1
+git clone https://github.com/paulmann/Get-Windows-Security-Events-By-IP.git
+cd Get-Windows-Security-Events-By-IP; ./build/Install-Dev.ps1 -Force
 $events = Get-WinSecEventByIp 203.0.113.7 -LastDays 2 -PassHostStatus
 $events | Test-WinSecBruteForce
 $events | Get-WinSecIpTimeline -AsciiChart
@@ -190,7 +191,7 @@ monitoring during an ongoing incident. |
 Enumerates the individual addresses of an IPv4/IPv6 CIDR or dash range.
 
 ```text
-@{syntaxItem=@{name=Expand-WinSecIpRange; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Expand-WinSecIpRange}}
 ```
 
 Utility for allow/deny-list building and sweep planning: expands
@@ -230,7 +231,7 @@ findings, sessions, coverage, attribution, timeline and a
 self-contained HTML report — hashed into manifest.json.
 
 ```text
-@{syntaxItem=@{name=Export-WinSecInvestigation; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Export-WinSecInvestigation}}
 ```
 
 Production evidence export for an IP investigation. Creates (or reuses)
@@ -298,7 +299,7 @@ Extracts indicators of compromise from events and findings and writes
 them as CSV, plain text, JSON or a STIX 2.1 bundle.
 
 ```text
-@{syntaxItem=@{name=Export-WinSecIocList; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Export-WinSecIocList}}
 ```
 
 Reports are read by people; blocklists and TIPs are read by machines.
@@ -553,7 +554,7 @@ Builds a chronological activity timeline with volume buckets, ASCII
 histogram and attacker-behavior summaries for collected events.
 
 ```text
-@{syntaxItem=@{name=Get-WinSecIpTimeline; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Get-WinSecIpTimeline}}
 ```
 
 Answers the first questions of any IP investigation: when did the
@@ -688,7 +689,7 @@ Reopens an exported investigation bundle so analysis and reporting can
 continue in a new session, on another workstation, or after a reboot.
 
 ```text
-@{syntaxItem=@{name=Import-WinSecCase; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Import-WinSecCase}}
 ```
 
 Reads manifest.json, case.json and every artifact present in the bundle
@@ -735,7 +736,7 @@ attacking IP: RFC 5322 .eml with evidence attachments, plus Markdown and
 a structured JSON payload.
 
 ```text
-@{syntaxItem=@{name=New-WinSecAbuseReport; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecAbuseReport}}
 ```
 
 Network operators act on evidence, not adjectives. This cmdlet packages
@@ -807,7 +808,7 @@ Creates an investigation case that binds evidence, findings and notes
 to a tamper-evident export bundle.
 
 ```text
-@{syntaxItem=@{name=New-WinSecCase; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecCase}}
 ```
 
 A WinSecCase is the unit of work for an incident responder. It carries
@@ -842,7 +843,7 @@ Produces a narrative incident report (Markdown and/or HTML) from
 collected events, detections, sessions, coverage and attribution.
 
 ```text
-@{syntaxItem=@{name=New-WinSecIncidentReport; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecIncidentReport}}
 ```
 
 Turns raw telemetry into the document a responder actually hands over:
@@ -905,7 +906,7 @@ Enriches attacker IPs: reverse DNS, RFC classification, optional
 threat-intel lookups (AbuseIPDB / AlienVault OTX / ip-api) with caching.
 
 ```text
-@{syntaxItem=@{name=Resolve-WinSecIpAttribution; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Resolve-WinSecIpAttribution}}
 ```
 
 Offline-first by design: PTR resolution and private/loopback/link-local
@@ -992,7 +993,7 @@ configuration, requirements and troubleshooting — or the full help of a
 single cmdlet.
 
 ```text
-@{syntaxItem=@{name=Show-WinSecHunterHelp; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Show-WinSecHunterHelp}}
 ```
 
 WinSecHunter ships 20 cmdlets, 14 hunt profiles and a 156-event catalog.
@@ -1048,7 +1049,7 @@ Finds audit-policy gaps: subcategories that are NOT recording the
 events an IP investigation depends on.
 
 ```text
-@{syntaxItem=@{name=Test-WinSecAuditPolicy; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecAuditPolicy}}
 ```
 
 The most painful IR discovery is "the events you need were never
@@ -1098,7 +1099,7 @@ Detects brute-force, password-spraying, credential-stuffing and
 lockout-storm patterns in collected events and rates their severity.
 
 ```text
-@{syntaxItem=@{name=Test-WinSecBruteForce; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecBruteForce}}
 ```
 
 Detection logic (all UTC, all thresholds configurable):
@@ -1148,7 +1149,7 @@ Verifies an exported evidence bundle against its SHA-256 manifest and
 reports modified, missing or unexpected files.
 
 ```text
-@{syntaxItem=@{name=Test-WinSecEvidenceIntegrity; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecEvidenceIntegrity}}
 ```
 
 Export-WinSecInvestigation writes manifest.json last and records the
@@ -1201,7 +1202,7 @@ Near-real-time tail of Windows event logs for a specific IP — live
 monitoring during an ongoing incident.
 
 ```text
-@{syntaxItem=@{name=Trace-WinSecIp; parameter=System.Management.Automation.PSObject[]}}
+@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Trace-WinSecIp}}
 ```
 
 Polls the selected channels every -IntervalSeconds using a per-log
