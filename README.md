@@ -289,9 +289,9 @@ Preferred: the release asset (no git history, fixed version).
 
 ```powershell
 $version = '2.1.0'
-$zip = Join-Path $env:TEMP "WinSecHunter-$version.zip?download=1"
+$zip = Join-Path $env:TEMP "WinSecHunter-$version-module.zip"
 $dir = Join-Path $env:TEMP "WinSecHunter-$version"
-Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version.zip?download=1" -OutFile $zip -UseBasicParsing
+Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version-module.zip" -OutFile $zip -UseBasicParsing
 Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
 ```
 
@@ -425,4 +425,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions and the definition of don
 **PolyForm Noncommercial License 1.0.0** — free for noncommercial use; commercial use, support and custom terms require a licence: **mid1977@gmail.com**. Full text: [LICENSE](LICENSE).
 
 WinSecHunter is a derivative work of `Get-SecurityEventsByIP.ps1` by **Mikhail Deynekin** (mid1977@gmail.com, https://deynekin.com). Releases up to 2.0.0 were published under GPL-3.0-or-later; 2.1.0 is relicensed by the copyright holder under PolyForm Noncommercial 1.0.0. Attribution is preserved in the manifest and in every source header.
+
 

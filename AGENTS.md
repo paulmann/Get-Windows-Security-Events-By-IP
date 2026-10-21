@@ -16,9 +16,9 @@ Release asset (preferred):
 
 ```powershell
 $version = '2.1.0'
-$zip = Join-Path $env:TEMP "WinSecHunter-$version.zip?download=1"
+$zip = Join-Path $env:TEMP "WinSecHunter-$version-module.zip"
 $dir = Join-Path $env:TEMP "WinSecHunter-$version"
-Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version.zip?download=1" -OutFile $zip -UseBasicParsing
+Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version-module.zip" -OutFile $zip -UseBasicParsing
 Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
 ```
 
@@ -96,4 +96,5 @@ through [SECURITY.md](SECURITY.md), never a public issue.
 - No `Write-Host`/`exit` in `src/`; approved verbs; StrictMode-safe property access.
 - Reports go to `<CaseId>-reports`, never into the evidence bundle.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before a pull request.
+
 
