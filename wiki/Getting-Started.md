@@ -37,8 +37,8 @@ cd Get-Windows-Security-Events-By-IP
 
 ```powershell
 $version = '2.1.0'
-$zip = Join-Path $env:TEMP "WinSecHunter-$version.zip"
-Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version.zip" -OutFile $zip -UseBasicParsing
+$zip = Join-Path $env:TEMP "WinSecHunter-$version.zip?download=1"
+Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version.zip?download=1" -OutFile $zip -UseBasicParsing
 Expand-Archive -LiteralPath $zip -DestinationPath "$env:USERPROFILE\Documents\PowerShell\Modules" -Force
 ```
 
@@ -168,3 +168,4 @@ $events = Get-WinSecEventByIp 198.51.100.9 -Path D:\Evidence\*.evtx -Profile All
 - [Reporting and Abuse](Reporting-and-Abuse) — what goes into the reports.
 - [Evidence and Reporting](Evidence-and-Reporting) — chain of custody in detail.
 - [Configuration](Configuration) — defaults, output directory, API keys.
+
