@@ -28,6 +28,16 @@ Repository (when tests, build scripts or docs are needed):
 git clone --depth 1 https://github.com/paulmann/Get-Windows-Security-Events-By-IP.git
 ```
 
+npm launcher (bundles the module; still needs `pwsh` 7.6+):
+
+```bash
+npm install -g winsechunter
+winsechunter --version
+```
+
+The full module path remains the preferred route for agents that need reports, evidence or
+catalog filters; the launcher covers `help`, `catalog` and `sweep`.
+
 ## 2. Install
 
 ```powershell

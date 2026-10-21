@@ -1,0 +1,4 @@
+module/
+LICENSE
+*.tgz
+node_modules/

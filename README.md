@@ -161,6 +161,26 @@ Show-WinSecHunterHelp -Cmdlet New-WinSecAbuseReport
 Show-WinSecHunterHelp -Markdown -OutFile .\docs\Command-Reference.md
 ```
 
+### Or install the npm launcher
+
+The [`winsechunter`](https://www.npmjs.com/package/winsechunter) package bundles the module and
+exposes a small CLI — useful where Node tooling is already the deployment mechanism.
+
+```bash
+npm install -g winsechunter
+winsechunter --version
+winsechunter help
+winsechunter catalog --profile BruteForce
+winsechunter sweep 203.0.113.7 --last-hours 24 --json
+```
+
+The launcher still requires PowerShell 7.6+ (`pwsh`) in `PATH`; collection needs Windows and an
+elevated session for the Security log. For reports and evidence, import the bundled module:
+
+```powershell
+Import-Module "$(npm root -g)/winsechunter/module/WinSecHunter.psd1"
+```
+
 ---
 
 ## Scenarios

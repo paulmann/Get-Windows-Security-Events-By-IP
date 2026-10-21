@@ -1,0 +1,41 @@
+{
+  "name": "winsechunter",
+  "version": "2.1.1",
+  "description": "Incident-response toolkit for Windows security events: collect by IP, analyze, report, preserve evidence. Thin CLI launcher for the WinSecHunter PowerShell module.",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Mikhail Deynekin <mid1977@gmail.com> (https://deynekin.com)",
+  "homepage": "https://github.com/paulmann/Get-Windows-Security-Events-By-IP",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulmann/Get-Windows-Security-Events-By-IP.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/issues"
+  },
+  "bin": {
+    "winsechunter": "bin/winsechunter.js"
+  },
+  "files": [
+    "bin/",
+    "module/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepack": "node scripts/prepare-module.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "security",
+    "incident-response",
+    "dfir",
+    "windows",
+    "event-log",
+    "powershell",
+    "forensics",
+    "abuse-report",
+    "stix"
+  ]
+}
