@@ -144,7 +144,7 @@ monitoring during an ongoing incident. |
 ## Catalog and configuration
 
 - Catalog: **156** events across **6** channels (version 2.1.0).
-- Configuration file: `C:\Users\mvd.AMD5700X3D\AppData\Local\WinSecHunter\config.json`
+- Configuration file: `%LOCALAPPDATA%\WinSecHunter\config.json` (Windows) or `~/.config/WinSecHunter/config.json` (Linux/macOS)
 - Override directory with `WINSECHUNTER_CONFIG_DIR` (portable IR kit on read-only media is supported for reads).
 
 | Option | Default | Meaning |
@@ -191,7 +191,7 @@ monitoring during an ongoing incident. |
 Enumerates the individual addresses of an IPv4/IPv6 CIDR or dash range.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Expand-WinSecIpRange}}
+Expand-WinSecIpRange [-Range] <string> [-MaxAddresses <int>] [-IncludeNetworkAddress] [-IncludeBroadcast] [<CommonParameters>]
 ```
 
 Utility for allow/deny-list building and sweep planning: expands
@@ -231,7 +231,7 @@ findings, sessions, coverage, attribution, timeline and a
 self-contained HTML report — hashed into manifest.json.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Export-WinSecInvestigation}}
+Export-WinSecInvestigation [[-Case] <WinSecCase>] [[-Event] <WinSecEvent[]>] [[-Finding] <Object[]>] [[-Session] <Object[]>] [[-Coverage] <Object[]>] [[-Attribution] <Object[]>] [[-Timeline] <Object[]>] [[-Summary] <hashtable>] [[-OutputDirectory] <string>] [[-Format] <WinSecExportFormat[]>] [[-MaxHtmlEventRows] <int>] [-PassThru] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 Production evidence export for an IP investigation. Creates (or reuses)
@@ -299,7 +299,7 @@ Extracts indicators of compromise from events and findings and writes
 them as CSV, plain text, JSON or a STIX 2.1 bundle.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Export-WinSecIocList}}
+Export-WinSecIocList [[-Case] <WinSecCase>] [[-Event] <Object[]>] [[-Finding] <Object[]>] [[-Format] <string>] [[-OutputDirectory] <string>] [[-FileName] <string>] [-PassThru] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 Reports are read by people; blocklists and TIPs are read by machines.
@@ -356,7 +356,11 @@ Collects Windows security events that reference an attacker IP address
 (IPv4/IPv6/CIDR) from local logs, remote hosts or offline EVTX files.
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Get-WinSecEventByIp [-IpAddress] <string[]> [-StartTime <datetime>] [-EndTime <datetime>] [-LastHours <int>] [-LastDays <int>] [-Profile <string[]>] [-Category <string[]>] [-EventId <int[]>] [-LogName <string[]>] [-MaxEvents <int>] [-DeepScan] [-NoServerSideIpFilter] [-IncludeMessage] [-IncludeRawXml] [-PassHostStatus] [-RetryCount <int>] [<CommonParameters>]
+
+Get-WinSecEventByIp [-IpAddress] <string[]> [-ComputerName <string[]>] [-CimSession <Object[]>] [-Credential <pscredential>] [-Authentication <string>] [-SessionOption <Object>] [-ThrottleLimit <int>] [-StartTime <datetime>] [-EndTime <datetime>] [-LastHours <int>] [-LastDays <int>] [-Profile <string[]>] [-Category <string[]>] [-EventId <int[]>] [-LogName <string[]>] [-MaxEvents <int>] [-DeepScan] [-NoServerSideIpFilter] [-IncludeMessage] [-IncludeRawXml] [-PassHostStatus] [-RetryCount <int>] [<CommonParameters>]
+
+Get-WinSecEventByIp [-IpAddress] <string[]> -Path <string[]> [-StartTime <datetime>] [-EndTime <datetime>] [-LastHours <int>] [-LastDays <int>] [-Profile <string[]>] [-Category <string[]>] [-EventId <int[]>] [-LogName <string[]>] [-MaxEvents <int>] [-DeepScan] [-NoServerSideIpFilter] [-IncludeMessage] [-IncludeRawXml] [-PassHostStatus] [-RetryCount <int>] [<CommonParameters>]
 ```
 
 The core evidence-collection cmdlet of WinSecHunter, built for incident
@@ -466,7 +470,9 @@ Browses the built-in WinSecHunter event catalog: IDs, logs, categories,
 MITRE ATT&CK mappings, importance and IP-bearing fields.
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Get-WinSecEventCatalog [-Category <string[]>] [-LogName <string[]>] [-Profile <string[]>] [-EventId <int[]>] [-Importance <string>] [-AttackId <string>] [-IpMatchable] [<CommonParameters>]
+
+Get-WinSecEventCatalog [-ListProfiles] [<CommonParameters>]
 ```
 
 The catalog is the knowledge base behind profiles, classification and
@@ -519,7 +525,9 @@ Get-WinSecEventCatalog -Category Kerberos -Importance Critical
 Shows the effective WinSecHunter configuration.
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Get-WinSecHunterOption [-ShowResolved] [<CommonParameters>]
+
+Get-WinSecHunterOption [-Name] <string> [<CommonParameters>]
 ```
 
 Returns the merged configuration (built-in defaults overlaid by the
@@ -554,7 +562,7 @@ Builds a chronological activity timeline with volume buckets, ASCII
 histogram and attacker-behavior summaries for collected events.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Get-WinSecIpTimeline}}
+Get-WinSecIpTimeline [-Event] <WinSecEvent[]> [[-BucketSize] <timespan>] [[-MaxBarWidth] <int>] [[-Top] <int>] [-AsciiChart] [<CommonParameters>]
 ```
 
 Answers the first questions of any IP investigation: when did the
@@ -597,7 +605,11 @@ Reports event log completeness: is each channel enabled, how far back
 does it reach, and is it about to wrap?
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Get-WinSecLogCoverage [-LogName <string[]>] [-CoveringFrom <datetime>] [<CommonParameters>]
+
+Get-WinSecLogCoverage [-ComputerName <string[]>] [-Credential <pscredential>] [-ThrottleLimit <int>] [-LogName <string[]>] [-CoveringFrom <datetime>] [<CommonParameters>]
+
+Get-WinSecLogCoverage -Path <string[]> [-LogName <string[]>] [-CoveringFrom <datetime>] [<CommonParameters>]
 ```
 
 "No events found" only means something when the logs CAN prove it.
@@ -647,7 +659,11 @@ Reconstructs logon sessions from collected events by chaining LogonId
 references (4624 → 4672/4648 → 4634/4647).
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Get-WinSecLogonSession -Event <WinSecEvent[]> [-IncludeEnded] [<CommonParameters>]
+
+Get-WinSecLogonSession -Event <WinSecEvent[]> [-ActiveOnly] [<CommonParameters>]
+
+Get-WinSecLogonSession -Event <WinSecEvent[]> [-EndedOnly] [<CommonParameters>]
 ```
 
 Turns a flat event list into attacker sessions: who logged on, from
@@ -689,7 +705,7 @@ Reopens an exported investigation bundle so analysis and reporting can
 continue in a new session, on another workstation, or after a reboot.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Import-WinSecCase}}
+Import-WinSecCase [-Path] <string> [-SkipEvents] [<CommonParameters>]
 ```
 
 Reads manifest.json, case.json and every artifact present in the bundle
@@ -736,7 +752,7 @@ attacking IP: RFC 5322 .eml with evidence attachments, plus Markdown and
 a structured JSON payload.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecAbuseReport}}
+New-WinSecAbuseReport [[-Case] <WinSecCase>] [[-Event] <Object[]>] [[-Finding] <Object[]>] [[-Attribution] <Object[]>] [[-TargetIp] <string>] [[-Provider] <string>] [[-ContactEmail] <string>] [[-ReporterName] <string>] [-ReporterEmail] <string> [[-ReporterOrg] <string>] [[-Format] <string>] [[-OutputDirectory] <string>] [[-FileName] <string>] [[-MaxEventsInBody] <int>] [-RedactAccounts] [-PassThru] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 Network operators act on evidence, not adjectives. This cmdlet packages
@@ -808,7 +824,7 @@ Creates an investigation case that binds evidence, findings and notes
 to a tamper-evident export bundle.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecCase}}
+New-WinSecCase [-SubjectIps] <string[]> [-Title <string>] [-Description <string>] [-ScopeHosts <string[]>] [-Operator <string>] [<CommonParameters>]
 ```
 
 A WinSecCase is the unit of work for an incident responder. It carries
@@ -843,7 +859,7 @@ Produces a narrative incident report (Markdown and/or HTML) from
 collected events, detections, sessions, coverage and attribution.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=New-WinSecIncidentReport}}
+New-WinSecIncidentReport [[-Case] <WinSecCase>] [[-Event] <Object[]>] [[-Finding] <Object[]>] [[-Session] <Object[]>] [[-Coverage] <Object[]>] [[-Attribution] <Object[]>] [[-Timeline] <Object[]>] [[-Summary] <hashtable>] [[-Template] <string>] [[-Format] <string>] [[-OutputDirectory] <string>] [[-FileName] <string>] [-PassThru] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 Turns raw telemetry into the document a responder actually hands over:
@@ -906,7 +922,7 @@ Enriches attacker IPs: reverse DNS, RFC classification, optional
 threat-intel lookups (AbuseIPDB / AlienVault OTX / ip-api) with caching.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Resolve-WinSecIpAttribution}}
+Resolve-WinSecIpAttribution [-IpAddress] <string[]> [-Provider <string>] [-NoCache] [-CacheHours <int>] [<CommonParameters>]
 ```
 
 Offline-first by design: PTR resolution and private/loopback/link-local
@@ -954,7 +970,11 @@ Get-WinSecEventByIp 203.0.113.7 | Select-Object -Expand SourceIp -Unique |
 Persists WinSecHunter configuration options.
 
 ```text
-@{syntaxItem=System.Management.Automation.PSObject[]}
+Set-WinSecHunterOption [-Name] <string> [-Value] <Object> [-WhatIf] [-Confirm] [<CommonParameters>]
+
+Set-WinSecHunterOption -Options <hashtable> [-WhatIf] [-Confirm] [<CommonParameters>]
+
+Set-WinSecHunterOption [-Reset] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 Writes options to config.json under the WinSecHunter configuration
@@ -993,7 +1013,7 @@ configuration, requirements and troubleshooting — or the full help of a
 single cmdlet.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Show-WinSecHunterHelp}}
+Show-WinSecHunterHelp [[-Cmdlet] <string>] [[-OutFile] <string>] [-Detailed] [-Markdown] [-Plain] [-PassThru] [<CommonParameters>]
 ```
 
 WinSecHunter ships 20 cmdlets, 14 hunt profiles and a 156-event catalog.
@@ -1049,7 +1069,7 @@ Finds audit-policy gaps: subcategories that are NOT recording the
 events an IP investigation depends on.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecAuditPolicy}}
+Test-WinSecAuditPolicy [[-ComputerName] <string[]>] [[-Credential] <pscredential>] [[-ThrottleLimit] <int>] [[-Profile] <string[]>] [-IncludeCompliant] [<CommonParameters>]
 ```
 
 The most painful IR discovery is "the events you need were never
@@ -1099,7 +1119,7 @@ Detects brute-force, password-spraying, credential-stuffing and
 lockout-storm patterns in collected events and rates their severity.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecBruteForce}}
+Test-WinSecBruteForce [-Event] <WinSecEvent[]> [[-FailureThreshold] <int>] [[-WindowMinutes] <int>] [[-SprayAccountThreshold] <int>] [[-SuccessWindowMinutes] <int>] [[-LockoutThreshold] <int>] [[-MaxEvidencePerFinding] <int>] [<CommonParameters>]
 ```
 
 Detection logic (all UTC, all thresholds configurable):
@@ -1149,7 +1169,7 @@ Verifies an exported evidence bundle against its SHA-256 manifest and
 reports modified, missing or unexpected files.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Test-WinSecEvidenceIntegrity}}
+Test-WinSecEvidenceIntegrity [-Path] <string> [-Algorithm <string>] [-ProblemsOnly] [-Summary] [-Json] [<CommonParameters>]
 ```
 
 Export-WinSecInvestigation writes manifest.json last and records the
@@ -1202,7 +1222,7 @@ Near-real-time tail of Windows event logs for a specific IP — live
 monitoring during an ongoing incident.
 
 ```text
-@{syntaxItem=@{parameter=System.Management.Automation.PSObject[]; name=Trace-WinSecIp}}
+Trace-WinSecIp [-IpAddress] <string[]> [-Profile <string[]>] [-Category <string[]>] [-EventId <int[]>] [-LogName <string[]>] [-IntervalSeconds <int>] [-Duration <timespan>] [-StartTime <datetime>] [-DeepScan] [-IncludeMessage] [<CommonParameters>]
 ```
 
 Polls the selected channels every -IntervalSeconds using a per-log

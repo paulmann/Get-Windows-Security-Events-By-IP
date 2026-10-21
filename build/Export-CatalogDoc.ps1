@@ -97,8 +97,21 @@ $stale = 0
 foreach ($o in $outputs) {
     $existing = (Test-Path -LiteralPath $o.Path) ? (Get-Content -Raw -LiteralPath $o.Path) : ''
     $normalizedNew = ($o.Content -replace "`r`n", "`n")
-    $changed = ($existing -replace "`r`n", "`n") -ne $normalizedNew
-    if ($changed) { $stale++ }
+    $normalizedOld = ($existing -replace "`r`n", "`n")
+    $changed = $normalizedOld.TrimEnd("`n") -ne $normalizedNew.TrimEnd("`n")
+    if ($changed) {
+        $stale++
+        if ($Check) {
+            Write-Host ("stale: {0} (existing {1}, expected {2} chars)" -f $o.Path, $normalizedOld.Length, $normalizedNew.Length)
+            $limit = [Math]::Min($normalizedOld.Length, $normalizedNew.Length)
+            for ($i = 0; $i -lt $limit; $i++) {
+                if ($normalizedOld[$i] -cne $normalizedNew[$i]) {
+                    Write-Host ("  first difference at char {0}: file={1} expected={2}" -f $i, [int]$normalizedOld[$i], [int]$normalizedNew[$i])
+                    break
+                }
+            }
+        }
+    }
     if (-not $Check -and $changed) {
         # Private module helpers are not exported; write atomically here.
         $tmp = $o.Path + '.tmp'

@@ -13,6 +13,8 @@ Collect everything an attacker IP did — locally, across hosts, or from offline
 [![Tests](https://img.shields.io/badge/tests-168%20passing-2EA043)](#build-test-contribute)
 [![License](https://img.shields.io/badge/license-PolyForm%20NC%201.0.0-E3B341)](./LICENSE)
 
+<img src="assets/social-preview.png" alt="WinSecHunter — incident-response toolkit for Windows security events: collect, analyze, attribute, report, preserve" width="100%">
+
 [Quick start](#quick-start) · [Commands](#command-reference) · [For agents](#for-ai-agents) · [Reports](#reporting-and-abuse) · [Wiki](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/wiki)
 
 </div>

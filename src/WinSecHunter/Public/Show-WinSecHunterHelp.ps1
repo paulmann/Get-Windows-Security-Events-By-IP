@@ -202,7 +202,7 @@ function Show-WinSecHunterHelp {
         & $line ($md ? '## Catalog and configuration' : 'CATALOG AND CONFIGURATION')
         & $line
         & $line ("- Catalog: **{0}** events across **{1}** channels (version {2})." -f @($res.Catalog.events).Count, $logs.Count, $res.Version)
-        & $line ("- Configuration file: ``{0}``" -f (Join-Path (Get-WinSecConfigPath) 'config.json'))
+        & $line '- Configuration file: `%LOCALAPPDATA%\WinSecHunter\config.json` (Windows) or `~/.config/WinSecHunter/config.json` (Linux/macOS)'
         & $line ("- Override directory with ``WINSECHUNTER_CONFIG_DIR`` (portable IR kit on read-only media is supported for reads).")
         & $line
         if ($md) {

@@ -48,6 +48,9 @@ function Get-WinSecCmdletReference {
 
     $cmd = Get-Command $Name -ErrorAction Stop
     $help = Get-Help $Name -Full
+    # Get-Help's Syntax is a formatted object whose string form is unstable; the
+    # command's own syntax rendering is deterministic across hosts and OSes.
+    $syntaxText = (@(Get-Command $Name -Syntax) -join "`n").Trim()
     $sb = [System.Text.StringBuilder]::new()
     $line = { param([string]$s = '') $null = $sb.AppendLine($s) }
     # Help objects are DynamicObjects: absent properties throw under StrictMode.
@@ -60,7 +63,7 @@ function Get-WinSecCmdletReference {
         & $line ([string]$help.Synopsis).Trim()
         & $line
         & $line '```text'
-        & $line ([string]$help.Syntax).Trim()
+        & $line $syntaxText
         & $line '```'
         & $line
         if (& $prop $help 'Description') { & $line ([string]($help.Description.Text -join ' ')).Trim(); & $line }
@@ -92,7 +95,7 @@ function Get-WinSecCmdletReference {
     & $line ([string]$help.Synopsis).Trim()
     & $line
     & $line 'SYNTAX'
-    foreach ($s in @(([string]$help.Syntax).Trim() -split "`n")) { & $line ('  ' + $s.Trim()) }
+    foreach ($s in @($syntaxText -split "`n")) { & $line ('  ' + $s.Trim()) }
     & $line
     if (& $prop $help 'Description') {
         & $line 'DESCRIPTION'
