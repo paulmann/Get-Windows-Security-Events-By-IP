@@ -36,9 +36,23 @@ cd Get-Windows-Security-Events-By-IP
 ### From a release zip
 
 ```powershell
-Expand-Archive .\WinSecHunter-2.1.0.zip -DestinationPath "$env:USERPROFILE\Documents\PowerShell\Modules"
-Unblock-File "$env:USERPROFILE\Documents\PowerShell\Modules\WinSecHunter\2.1.0\*" -ErrorAction SilentlyContinue
+$version = '2.1.0'
+$zip = Join-Path $env:TEMP "WinSecHunter-$version.zip"
+Invoke-WebRequest "https://github.com/paulmann/Get-Windows-Security-Events-By-IP/releases/download/v$version/WinSecHunter-$version.zip" -OutFile $zip -UseBasicParsing
+Expand-Archive -LiteralPath $zip -DestinationPath "$env:USERPROFILE\Documents\PowerShell\Modules" -Force
 ```
+
+### For automation and agents (portable, no profile changes)
+
+```powershell
+$dir = Join-Path $env:TEMP 'WinSecHunter-2.1.0'
+Import-Module (Join-Path $dir 'WinSecHunter/2.1.0/WinSecHunter.psd1') -Force
+(Get-Module WinSecHunter).ExportedFunctions.Count   # 20
+```
+
+Always pass a time window and `-PassHostStatus`, never use `Read-Host`/`Get-Credential`, and
+keep API keys in environment variables. The full protocol is in
+[AGENTS.md](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/blob/main/AGENTS.md).
 
 ### Verify
 

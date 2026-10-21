@@ -184,3 +184,16 @@ No, and it will not: the module requires PowerShell 7.6+ (Core).
 **How do I cite a finding?**
 Case id + artifact + SHA-256 from `manifest.json` + UTC timestamp. `Test-WinSecEvidenceIntegrity`
 gives you the verification line.
+
+## Reporting bugs
+
+If the tool fails or contradicts the documentation, open an issue:
+https://github.com/paulmann/Get-Windows-Security-Events-By-IP/issues/new/choose
+
+Include the module version, PowerShell version and OS, the exact command (redacted), expected
+vs actual behaviour, and `Get-Error | Out-String`. For collection problems attach the
+`-PassHostStatus` output with `LogDetails` and state whether the session was elevated.
+
+Never paste API keys, personal data, raw event dumps or evidence bundles. Security issues go
+through [SECURITY.md](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/blob/main/SECURITY.md),
+not a public issue.

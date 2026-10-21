@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a capability for collection, analysis, reporting or evidence.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: Incident task
+      description: What are you trying to accomplish, not only which switch you want.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: Command shape, output, expected defaults.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing cmdlets, scripts or manual steps you use today.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same request
+          required: true

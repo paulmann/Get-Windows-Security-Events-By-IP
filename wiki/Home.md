@@ -60,6 +60,11 @@ flowchart LR
 | **Collection** | Per-channel execution: a missing Sysmon/RDP/firewall log is `Skipped`, not fatal |
 | **Reliability** | No crash without a time window; `-ComputerName` sweeps work; `-PassHostStatus` always arrives |
 
+> [!NOTE]
+> The legacy `Get-SecurityEventsByIP.ps1` is no longer part of `main`. It stays available at
+> tag [`v5.0.2`](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/tree/v5.0.2)
+> and as a release asset, and is no longer maintained. New work goes into the module.
+
 Full list: [Changelog](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/blob/main/CHANGELOG.md).
 
 ## Where to go next

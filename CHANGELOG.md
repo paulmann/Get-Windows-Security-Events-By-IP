@@ -53,6 +53,9 @@ Version 2.1.0 also fixes three defects that made normal collection fail outright
   break audit-policy analysis.
 - Project relicensed to **PolyForm Noncommercial 1.0.0** (owner decision). Releases up to
   2.0.0 were published under GPL-3.0-or-later; attribution to the original author is preserved.
+- Legacy `Get-SecurityEventsByIP.ps1` removed from `main`. It remains available at tag
+  [`v5.0.2`](https://github.com/paulmann/Get-Windows-Security-Events-By-IP/tree/v5.0.2) and as
+  a release asset, and is no longer maintained.
 - Log errors are classified by `HResult`/Win32 code with a message fallback, so access
   denied and missing channels are recognized on non-English systems.
 

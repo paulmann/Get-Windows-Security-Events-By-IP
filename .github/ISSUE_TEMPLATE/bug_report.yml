@@ -1,0 +1,70 @@
+name: Bug report
+description: Something failed, behaved unexpectedly, or contradicted the documentation.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not paste API keys, personal data, raw event dumps or evidence bundles.
+        Security vulnerabilities must go through SECURITY.md, not this form.
+  - type: input
+    id: version
+    attributes:
+      label: WinSecHunter version
+      description: Output of `(Get-Module WinSecHunter).Version`
+      placeholder: 2.1.0
+    validations:
+      required: true
+  - type: input
+    id: pwsh
+    attributes:
+      label: PowerShell and OS
+      description: Output of `$PSVersionTable.PSVersion` and the OS build
+      placeholder: 7.6.6 on Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How was the module loaded?
+      options:
+        - Imported from a release zip (portable)
+        - Installed with build/Install-Dev.ps1
+        - Imported from a git clone
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      description: Redact addresses, accounts and host names if sensitive.
+      render: powershell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour and full error
+      description: Paste `Get-Error | Out-String`, plus `-PassHostStatus` output with LogDetails for collection issues.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I ran the command with a time window (`-LastHours`/`-LastDays`/`-StartTime`)
+          required: true
+        - label: I removed API keys, personal data and evidence contents from this report
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md)
+          required: true
