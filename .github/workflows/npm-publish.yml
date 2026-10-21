@@ -1,0 +1,36 @@
+name: npm publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify version against the release tag
+        working-directory: npm
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node -e "const p=require('./package.json'); const t=process.env.TAG||''; if (t && t !== 'v'+p.version) { console.error('tag '+t+' does not match package '+p.version); process.exit(1); } console.log('publishing '+p.name+'@'+p.version);"
+
+      - name: Publish with provenance
+        working-directory: npm
+        run: npm publish --access public --provenance
